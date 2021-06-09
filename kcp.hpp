@@ -148,6 +148,14 @@ namespace KCP
 		int(*output)(const char *buf, int len, void *user);
 		void(*writelog)(const char *log, void *user);
 
+		static char * Encode8u(char *p, unsigned char c);
+		static const char * Decode8u(const char *p, unsigned char *c);
+		static char * Encode16u(char *p, unsigned short w);
+		static const char * Decode16u(const char *p, unsigned short *w);
+		static char * Encode32u(char *p, uint32_t l);
+		static const char * Decode32u(const char *p, uint32_t *l);
+		static char * Encode_seg(char *ptr, const internal_impl::Segment &seg);
+
 	public:
 		//---------------------------------------------------------------------
 		// interface

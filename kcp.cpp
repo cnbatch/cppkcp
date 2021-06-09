@@ -27,28 +27,28 @@ namespace KCP
 	//=====================================================================
 	// KCP BASIC
 	//=====================================================================
-	const uint32_t IKCP_RTO_NDL = 30;		// no delay min rto
-	const uint32_t IKCP_RTO_MIN = 100;		// normal min rto
-	const uint32_t IKCP_RTO_DEF = 200;
-	const uint32_t IKCP_RTO_MAX = 60000;
-	const uint32_t IKCP_CMD_PUSH = 81;		// cmd: push data
-	const uint32_t IKCP_CMD_ACK = 82;		// cmd: ack
-	const uint32_t IKCP_CMD_WASK = 83;		// cmd: window probe (ask)
-	const uint32_t IKCP_CMD_WINS = 84;		// cmd: window size (tell)
-	const uint32_t IKCP_ASK_SEND = 1;		// need to send IKCP_CMD_WASK
-	const uint32_t IKCP_ASK_TELL = 2;		// need to send IKCP_CMD_WINS
-	const uint32_t IKCP_WND_SND = 32;
-	const uint32_t IKCP_WND_RCV = 128;       // must >= max fragment size
-	const uint32_t IKCP_MTU_DEF = 1400;
-	const uint32_t IKCP_ACK_FAST = 3;
-	const uint32_t IKCP_INTERVAL = 100;
-	const uint32_t IKCP_OVERHEAD = 24;
-	const uint32_t IKCP_DEADLINK = 20;
-	const uint32_t IKCP_THRESH_INIT = 2;
-	const uint32_t IKCP_THRESH_MIN = 2;
-	const uint32_t IKCP_PROBE_INIT = 7000;		// 7 secs to probe window size
-	const uint32_t IKCP_PROBE_LIMIT = 120000;	// up to 120 secs to probe window
-	const uint32_t IKCP_FASTACK_LIMIT = 5;		// max times to trigger fastack
+	constexpr uint32_t IKCP_RTO_NDL = 30;		// no delay min rto
+	constexpr uint32_t IKCP_RTO_MIN = 100;		// normal min rto
+	constexpr uint32_t IKCP_RTO_DEF = 200;
+	constexpr uint32_t IKCP_RTO_MAX = 60000;
+	constexpr uint32_t IKCP_CMD_PUSH = 81;		// cmd: push data
+	constexpr uint32_t IKCP_CMD_ACK = 82;		// cmd: ack
+	constexpr uint32_t IKCP_CMD_WASK = 83;		// cmd: window probe (ask)
+	constexpr uint32_t IKCP_CMD_WINS = 84;		// cmd: window size (tell)
+	constexpr uint32_t IKCP_ASK_SEND = 1;		// need to send IKCP_CMD_WASK
+	constexpr uint32_t IKCP_ASK_TELL = 2;		// need to send IKCP_CMD_WINS
+	constexpr uint32_t IKCP_WND_SND = 32;
+	constexpr uint32_t IKCP_WND_RCV = 128;       // must >= max fragment size
+	constexpr uint32_t IKCP_MTU_DEF = 1400;
+	constexpr uint32_t IKCP_ACK_FAST = 3;
+	constexpr uint32_t IKCP_INTERVAL = 100;
+	constexpr uint32_t IKCP_OVERHEAD = 24;
+	constexpr uint32_t IKCP_DEADLINK = 20;
+	constexpr uint32_t IKCP_THRESH_INIT = 2;
+	constexpr uint32_t IKCP_THRESH_MIN = 2;
+	constexpr uint32_t IKCP_PROBE_INIT = 7000;		// 7 secs to probe window size
+	constexpr uint32_t IKCP_PROBE_LIMIT = 120000;	// up to 120 secs to probe window
+	constexpr uint32_t IKCP_FASTACK_LIMIT = 5;		// max times to trigger fastack
 
 
 	//---------------------------------------------------------------------
@@ -56,21 +56,21 @@ namespace KCP
 	//---------------------------------------------------------------------
 
 	/* encode 8 bits unsigned int */
-	static inline char *ikcp_encode8u(char *p, unsigned char c)
+	inline char * KCP::Encode8u(char *p, unsigned char c)
 	{
 		*(unsigned char*)p++ = c;
 		return p;
 	}
 
 	/* decode 8 bits unsigned int */
-	static inline const char *ikcp_decode8u(const char *p, unsigned char *c)
+	inline const char * KCP::Decode8u(const char *p, unsigned char *c)
 	{
 		*c = *(unsigned char*)p++;
 		return p;
 	}
 
 	/* encode 16 bits unsigned int (lsb) */
-	static inline char *ikcp_encode16u(char *p, unsigned short w)
+	inline char * KCP::Encode16u(char *p, unsigned short w)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*(unsigned char*)(p + 0) = (w & 255);
@@ -83,7 +83,7 @@ namespace KCP
 	}
 
 	/* decode 16 bits unsigned int (lsb) */
-	static inline const char *ikcp_decode16u(const char *p, unsigned short *w)
+	inline const char * KCP::Decode16u(const char *p, unsigned short *w)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*w = *(const unsigned char*)(p + 1);
@@ -96,7 +96,7 @@ namespace KCP
 	}
 
 	/* encode 32 bits unsigned int (lsb) */
-	static inline char *ikcp_encode32u(char *p, uint32_t l)
+	inline char * KCP::Encode32u(char *p, uint32_t l)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*(unsigned char*)(p + 0) = (unsigned char)((l >> 0) & 0xff);
@@ -111,7 +111,7 @@ namespace KCP
 	}
 
 	/* decode 32 bits unsigned int (lsb) */
-	static inline const char *ikcp_decode32u(const char *p, uint32_t *l)
+	inline const char * KCP::Decode32u(const char *p, uint32_t *l)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*l = *(const unsigned char*)(p + 3);
@@ -123,6 +123,22 @@ namespace KCP
 #endif
 		p += 4;
 		return p;
+	}
+
+	//---------------------------------------------------------------------
+	// Encode_seg
+	//---------------------------------------------------------------------
+	char * KCP::Encode_seg(char *ptr, const Segment &seg)
+	{
+		ptr = Encode32u(ptr, seg.conv);
+		ptr = Encode8u(ptr, static_cast<uint8_t>(seg.cmd));
+		ptr = Encode8u(ptr, static_cast<uint8_t>(seg.frg));
+		ptr = Encode16u(ptr, static_cast<uint16_t>(seg.wnd));
+		ptr = Encode32u(ptr, seg.ts);
+		ptr = Encode32u(ptr, seg.sn);
+		ptr = Encode32u(ptr, seg.una);
+		ptr = Encode32u(ptr, static_cast<int>(seg.data.size()));
+		return ptr;
 	}
 
 	static inline uint32_t _ibound_(uint32_t lower, uint32_t middle, uint32_t upper)
@@ -635,16 +651,16 @@ namespace KCP
 
 			if (size < (int)IKCP_OVERHEAD) break;
 
-			data = ikcp_decode32u(data, &conv);
+			data = Decode32u(data, &conv);
 			if (conv != this->conv) return -1;
 
-			data = ikcp_decode8u(data, &cmd);
-			data = ikcp_decode8u(data, &frg);
-			data = ikcp_decode16u(data, &wnd);
-			data = ikcp_decode32u(data, &ts);
-			data = ikcp_decode32u(data, &sn);
-			data = ikcp_decode32u(data, &una);
-			data = ikcp_decode32u(data, &len);
+			data = Decode8u(data, &cmd);
+			data = Decode8u(data, &frg);
+			data = Decode16u(data, &wnd);
+			data = Decode32u(data, &ts);
+			data = Decode32u(data, &sn);
+			data = Decode32u(data, &una);
+			data = Decode32u(data, &len);
 
 			size -= IKCP_OVERHEAD;
 
@@ -795,23 +811,6 @@ namespace KCP
 		return 0;
 	}
 
-
-	//---------------------------------------------------------------------
-	// ikcp_encode_seg
-	//---------------------------------------------------------------------
-	static char *ikcp_encode_seg(char *ptr, const Segment &seg)
-	{
-		ptr = ikcp_encode32u(ptr, seg.conv);
-		ptr = ikcp_encode8u(ptr, static_cast<uint8_t>(seg.cmd));
-		ptr = ikcp_encode8u(ptr, static_cast<uint8_t>(seg.frg));
-		ptr = ikcp_encode16u(ptr, static_cast<uint16_t>(seg.wnd));
-		ptr = ikcp_encode32u(ptr, seg.ts);
-		ptr = ikcp_encode32u(ptr, seg.sn);
-		ptr = ikcp_encode32u(ptr, seg.una);
-		ptr = ikcp_encode32u(ptr, static_cast<int>(seg.data.size()));
-		return ptr;
-	}
-
 	int KCP::WindowUnused()
 	{
 		if (this->rcv_queue.size() < this->rcv_wnd)
@@ -859,7 +858,7 @@ namespace KCP
 			}
 			seg.sn = this->acklist[i].first;
 			seg.ts = this->acklist[i].second;
-			ptr = ikcp_encode_seg(ptr, seg);
+			ptr = Encode_seg(ptr, seg);
 		}
 
 		this->acklist.clear();
@@ -902,7 +901,7 @@ namespace KCP
 				Output(buffer, size);
 				ptr = buffer;
 			}
-			ptr = ikcp_encode_seg(ptr, seg);
+			ptr = Encode_seg(ptr, seg);
 		}
 
 		// flush window probing commands
@@ -915,7 +914,7 @@ namespace KCP
 				Output(buffer, size);
 				ptr = buffer;
 			}
-			ptr = ikcp_encode_seg(ptr, seg);
+			ptr = Encode_seg(ptr, seg);
 		}
 
 		this->probe = 0;
@@ -1006,7 +1005,7 @@ namespace KCP
 					ptr = buffer;
 				}
 
-				ptr = ikcp_encode_seg(ptr, *segment);
+				ptr = Encode_seg(ptr, *segment);
 
 				if (segment->data.size() > 0)
 				{
@@ -1221,12 +1220,11 @@ namespace KCP
 		return static_cast<int>(this->snd_buf.size() + this->snd_queue.size());
 	}
 
-
 	// read conv
 	uint32_t KCP::GetConv(const void *ptr)
 	{
 		uint32_t conv;
-		ikcp_decode32u(static_cast<const char*>(ptr), &conv);
+		Decode32u(static_cast<const char*>(ptr), &conv);
 		return conv;
 	}
 

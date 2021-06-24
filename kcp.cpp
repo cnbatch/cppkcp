@@ -154,9 +154,9 @@ namespace KCP
 	// write log
 	void KCP::WriteLog(int mask, const char *fmt, ...)
 	{
-		char buffer[1024];
+		char buffer[1024] = { 0 };
 		va_list argptr;
-		if ((mask & this->logmask) == 0 || this->writelog == 0) return;
+		if ((mask & this->logmask) == 0 || this->writelog == nullptr) return;
 		va_start(argptr, fmt);
 		vsprintf(buffer, fmt, argptr);
 		va_end(argptr);
@@ -164,10 +164,9 @@ namespace KCP
 	}
 
 	// check log mask
-	int KCP::CanLog(int mask)
+	bool KCP::CanLog(int mask)
 	{
-		if ((mask & this->logmask) == 0 || this->writelog == NULL) return 0;
-		return 1;
+		return mask & this->logmask && this->writelog != nullptr;
 	}
 
 	// output segment
@@ -183,16 +182,15 @@ namespace KCP
 	}
 
 	// output queue
-	void ikcp_qprint(const char *name, const struct IQUEUEHEAD *head)
+	void KCP::PrintQueue(const char *name, const std::list<Segment> &segment)
 	{
 #if 0
-		const struct IQUEUEHEAD *p;
 		printf("<%s>: [", name);
-		for (p = head->next; p != head; p = p->next)
+		for (auto seg = segment.cbegin(), next = seg; seg != segment.cend(); seg = next)
 		{
-			const IKCPSEG *seg = iqueue_entry(p, const IKCPSEG, node);
+			++next;
 			printf("(%lu %d)", (unsigned long)seg->sn, (int)(seg->ts % 10000));
-			if (p->next != head) printf(",");
+			if (next != segment.cend()) printf(",");
 		}
 		printf("]\n");
 #endif
@@ -291,10 +289,10 @@ namespace KCP
 
 		// merge fragment
 		len = 0;
-		for (auto seg = rcv_queue.begin(); seg != this->rcv_queue.end();)
+		for (auto seg = rcv_queue.begin(), next = seg; seg != this->rcv_queue.end(); seg = next)
 		{
 			int fragment;
-
+			++next;
 			if (buffer)
 			{
 				std::copy(seg->data.begin(), seg->data.end(), buffer);
@@ -314,7 +312,6 @@ namespace KCP
 			{
 				seg = this->rcv_queue.erase(seg);
 			}
-			else ++seg;
 
 			if (fragment == 0)
 				break;
@@ -596,7 +593,7 @@ namespace KCP
 		}
 
 #if 0
-		ikcp_qprint("rcvbuf", &this->rcv_buf);
+		PrintQueue("rcvbuf", &this->rcv_buf);
 		printf("rcv_nxt=%lu\n", this->rcv_nxt);
 #endif
 
@@ -616,7 +613,7 @@ namespace KCP
 		}
 
 #if 0
-		ikcp_qprint("queue", &this->rcv_queue);
+		PrintQueue("queue", &this->rcv_queue);
 		printf("rcv_nxt=%lu\n", this->rcv_nxt);
 #endif
 
@@ -1241,5 +1238,10 @@ namespace KCP
 	int32_t& KCP::RxMinRTO()
 	{
 		return this->rx_minrto;
+	}
+
+	int& KCP::LogMask()
+	{
+		return this->logmask;
 	}
 }

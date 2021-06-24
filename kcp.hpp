@@ -155,6 +155,7 @@ namespace KCP
 		static char * Encode32u(char *p, uint32_t l);
 		static const char * Decode32u(const char *p, uint32_t *l);
 		static char * Encode_seg(char *ptr, const internal_impl::Segment &seg);
+		void PrintQueue(const char *name, const std::list<internal_impl::Segment> &segment);
 
 	public:
 		//---------------------------------------------------------------------
@@ -213,7 +214,7 @@ namespace KCP
 		// get how many packet is waiting to be sent
 		int WaitintForSend();
 
-		// fastest: NoDelay(kcp, 1, 20, 2, 1)
+		// fastest: NoDelay(1, 20, 2, 1)
 		// nodelay: 0:disable(default), 1:enable
 		// interval: internal update timer interval in millisec, default is 100ms 
 		// resend: 0:disable fast resend(default), 1:enable fast resend
@@ -228,13 +229,14 @@ namespace KCP
 		uint32_t GetConv();
 
 		// check log mask
-		int CanLog(int mask);
+		bool CanLog(int mask);
 
 		int Interval(int interval);
 
 		void SetStreamMode(bool enable);
 
 		int32_t& RxMinRTO();
+		int& LogMask();
 
 	protected:
 

@@ -17,9 +17,9 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cassert>
+#include <functional>
 #include <list>
 #include <vector>
-
 
 
 //=====================================================================
@@ -145,8 +145,8 @@ namespace KCP
 		int fastlimit;
 		int nocwnd, stream;
 		int logmask;
-		int(*output)(const char *buf, int len, void *user);
-		void(*writelog)(const char *log, void *user);
+		std::function<int(const char *, int, void *)> output;	// int(*output)(const char *buf, int len, void *user)
+		std::function<void(const char *, void *)> writelog;	//void(*writelog)(const char *log, void *user)
 
 		static char * Encode8u(char *p, unsigned char c);
 		static const char * Decode8u(const char *p, unsigned char *c);
@@ -171,7 +171,8 @@ namespace KCP
 		~KCP();
 
 		// set output callback, which will be invoked by kcp
-		void SetOutput(int(*output)(const char *buf, int len, void *user));
+		// int(*output)(const char *buf, int len, void *user)
+		void SetOutput(std::function<int(const char *, int, void *)> output);
 
 		// user/upper level recv: returns size, returns below zero for EAGAIN
 		int Receive(char *buffer, int len);
@@ -212,7 +213,7 @@ namespace KCP
 		void GetWindowSize(int &sndwnd, int &rcvwnd);
 
 		// get how many packet is waiting to be sent
-		int WaitintForSend();
+		int WaitingForSend();
 
 		// fastest: NoDelay(1, 20, 2, 1)
 		// nodelay: 0:disable(default), 1:enable

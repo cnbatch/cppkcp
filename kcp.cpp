@@ -257,7 +257,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// set output callback, which will be invoked by kcp
 	//---------------------------------------------------------------------
-	void KCP::SetOutput(int(*output)(const char *buf, int len, void *user))
+	void KCP::SetOutput(std::function<int(const char *, int, void *)> output)
 	{
 		this->output = output;
 	}
@@ -1212,7 +1212,7 @@ namespace KCP
 		rcvwnd = this->rcv_wnd;
 	}
 
-	int KCP::WaitintForSend()
+	int KCP::WaitingForSend()
 	{
 		return static_cast<int>(this->snd_buf.size() + this->snd_queue.size());
 	}

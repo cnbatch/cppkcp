@@ -241,8 +241,6 @@ namespace KCP
 		this->nocwnd = 0;
 		this->xmit = 0;
 		this->dead_link = IKCP_DEADLINK;
-		this->output = NULL;
-		this->writelog = NULL;
 	}
 
 

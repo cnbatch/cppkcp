@@ -20,9 +20,9 @@
 #include <memory.h>
 
 
-namespace KCP
+namespace kcp
 {
-	using internal_impl::Segment;
+	using internal_impl::segment;
 
 	//=====================================================================
 	// KCP BASIC
@@ -56,21 +56,21 @@ namespace KCP
 	//---------------------------------------------------------------------
 
 	/* encode 8 bits unsigned int */
-	inline char * KCP::Encode8u(char *p, unsigned char c)
+	inline char * kcp::encode8u(char *p, unsigned char c)
 	{
 		*(unsigned char*)p++ = c;
 		return p;
 	}
 
 	/* decode 8 bits unsigned int */
-	inline const char * KCP::Decode8u(const char *p, unsigned char *c)
+	inline const char * kcp::decode8u(const char *p, unsigned char *c)
 	{
 		*c = *(unsigned char*)p++;
 		return p;
 	}
 
 	/* encode 16 bits unsigned int (lsb) */
-	inline char * KCP::Encode16u(char *p, unsigned short w)
+	inline char * kcp::encode16u(char *p, unsigned short w)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*(unsigned char*)(p + 0) = (w & 255);
@@ -83,7 +83,7 @@ namespace KCP
 	}
 
 	/* decode 16 bits unsigned int (lsb) */
-	inline const char * KCP::Decode16u(const char *p, unsigned short *w)
+	inline const char * kcp::decode16u(const char *p, unsigned short *w)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*w = *(const unsigned char*)(p + 1);
@@ -96,7 +96,7 @@ namespace KCP
 	}
 
 	/* encode 32 bits unsigned int (lsb) */
-	inline char * KCP::Encode32u(char *p, uint32_t l)
+	inline char * kcp::encode32u(char *p, uint32_t l)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*(unsigned char*)(p + 0) = (unsigned char)((l >> 0) & 0xff);
@@ -111,7 +111,7 @@ namespace KCP
 	}
 
 	/* decode 32 bits unsigned int (lsb) */
-	inline const char * KCP::Decode32u(const char *p, uint32_t *l)
+	inline const char * kcp::decode32u(const char *p, uint32_t *l)
 	{
 #if IWORDS_BIG_ENDIAN || IWORDS_MUST_ALIGN
 		*l = *(const unsigned char*)(p + 3);
@@ -128,16 +128,16 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// Encode_seg
 	//---------------------------------------------------------------------
-	char * KCP::Encode_seg(char *ptr, const Segment &seg)
+	char * kcp::encode_seg(char *ptr, const segment &seg)
 	{
-		ptr = Encode32u(ptr, seg.conv);
-		ptr = Encode8u(ptr, static_cast<uint8_t>(seg.cmd));
-		ptr = Encode8u(ptr, static_cast<uint8_t>(seg.frg));
-		ptr = Encode16u(ptr, static_cast<uint16_t>(seg.wnd));
-		ptr = Encode32u(ptr, seg.ts);
-		ptr = Encode32u(ptr, seg.sn);
-		ptr = Encode32u(ptr, seg.una);
-		ptr = Encode32u(ptr, static_cast<int>(seg.data.size()));
+		ptr = encode32u(ptr, seg.conv);
+		ptr = encode8u(ptr, static_cast<uint8_t>(seg.cmd));
+		ptr = encode8u(ptr, static_cast<uint8_t>(seg.frg));
+		ptr = encode16u(ptr, static_cast<uint16_t>(seg.wnd));
+		ptr = encode32u(ptr, seg.ts);
+		ptr = encode32u(ptr, seg.sn);
+		ptr = encode32u(ptr, seg.una);
+		ptr = encode32u(ptr, static_cast<int>(seg.data.size()));
 		return ptr;
 	}
 
@@ -152,7 +152,7 @@ namespace KCP
 	}
 
 	// write log
-	void KCP::WriteLog(int mask, const char *fmt, ...)
+	void kcp::write_log(int mask, const char *fmt, ...)
 	{
 		char buffer[1024] = { 0 };
 		va_list argptr;
@@ -164,33 +164,33 @@ namespace KCP
 	}
 
 	// check log mask
-	bool KCP::CanLog(int mask)
+	bool kcp::can_log(int mask)
 	{
 		return mask & this->logmask && this->writelog != nullptr;
 	}
 
 	// output segment
-	int KCP::Output(const void *data, int size)
+	int kcp::kcp_output(const void *data, int size)
 	{
 		assert(this->output);
-		if (CanLog(IKCP_LOG_OUTPUT))
+		if (can_log(KCP_LOG_OUTPUT))
 		{
-			WriteLog(IKCP_LOG_OUTPUT, "[RO] %ld bytes", static_cast<long>(size));
+			write_log(KCP_LOG_OUTPUT, "[RO] %ld bytes", static_cast<long>(size));
 		}
 		if (size == 0) return 0;
 		return this->output((const char*)data, size, this->user);
 	}
 
 	// output queue
-	void KCP::PrintQueue(const char *name, const std::list<Segment> &segment)
+	void kcp::print_queue(const char *name, const std::list<segment> &segment_list)
 	{
 #if 0
 		printf("<%s>: [", name);
-		for (auto seg = segment.cbegin(), next = seg; seg != segment.cend(); seg = next)
+		for (auto seg = segment_list.cbegin(), next = seg; seg != segment_list.cend(); seg = next)
 		{
 			++next;
 			printf("(%lu %d)", (unsigned long)seg->sn, (int)(seg->ts % 10000));
-			if (next != segment.cend()) printf(",");
+			if (next != segment_list.cend()) printf(",");
 		}
 		printf("]\n");
 #endif
@@ -200,7 +200,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// create a new kcpcb
 	//---------------------------------------------------------------------
-	KCP::KCP(uint32_t conv, void *user)
+	kcp::kcp(uint32_t conv, void *user)
 	{
 		this->conv = conv;
 		this->user = user;
@@ -247,7 +247,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// release a new kcpcb
 	//---------------------------------------------------------------------
-	KCP::~KCP()
+	kcp::~kcp()
 	{
 	}
 
@@ -255,7 +255,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// set output callback, which will be invoked by kcp
 	//---------------------------------------------------------------------
-	void KCP::SetOutput(std::function<int(const char *, int, void *)> output)
+	void kcp::set_output(std::function<int(const char *, int, void *)> output)
 	{
 		this->output = output;
 	}
@@ -264,7 +264,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// user/upper level recv: returns size, returns below zero for EAGAIN
 	//---------------------------------------------------------------------
-	int KCP::Receive(char *buffer, int len)
+	int kcp::receive(char *buffer, int len)
 	{
 		bool ispeek = len < 0;
 		bool recover = false;
@@ -301,9 +301,9 @@ namespace KCP
 			len += static_cast<int>(seg->data.size());
 			fragment = seg->frg;
 
-			if (CanLog(IKCP_LOG_RECV))
+			if (can_log(KCP_LOG_RECV))
 			{
-				WriteLog(IKCP_LOG_RECV, "recv sn=%lu", (unsigned long)seg->sn);
+				write_log(KCP_LOG_RECV, "recv sn=%lu", (unsigned long)seg->sn);
 			}
 
 			if (!ispeek)
@@ -343,7 +343,7 @@ namespace KCP
 		return len;
 	}
 
-	int KCP::Receive(std::vector<char> &buffer)
+	int kcp::receive(std::vector<char> &buffer)
 	{
 		int peeksize = PeekSize();
 
@@ -353,13 +353,13 @@ namespace KCP
 		if (peeksize > buffer.size())
 			buffer.resize(peeksize);
 
-		return Receive(buffer.data(), static_cast<int>(buffer.size()));
+		return receive(buffer.data(), static_cast<int>(buffer.size()));
 	}
 
 	//---------------------------------------------------------------------
 	// peek data size
 	//---------------------------------------------------------------------
-	int KCP::PeekSize()
+	int kcp::PeekSize()
 	{
 		int length = 0;
 
@@ -383,7 +383,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// user/upper level send, returns below zero for error
 	//---------------------------------------------------------------------
-	int KCP::Send(const char *buffer, int len)
+	int kcp::send(const char *buffer, int len)
 	{
 		assert(this->mss > 0);
 		if (len < 0) return -1;
@@ -430,7 +430,7 @@ namespace KCP
 		for (int i = 0; i < count; i++)
 		{
 			int size = len > (int)this->mss ? (int)this->mss : len;
-			this->snd_queue.emplace_back(Segment(size));
+			this->snd_queue.emplace_back(segment(size));
 			auto &seg = snd_queue.back();
 			if (buffer && len > 0)
 			{
@@ -452,7 +452,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// parse ack
 	//---------------------------------------------------------------------
-	void KCP::UpdateAck(int32_t rtt)
+	void kcp::update_ack(int32_t rtt)
 	{
 		int32_t rto = 0;
 		if (this->rx_srtt == 0)
@@ -472,7 +472,7 @@ namespace KCP
 		this->rx_rto = _ibound_(this->rx_minrto, rto, IKCP_RTO_MAX);
 	}
 
-	void KCP::ShrinkBuffer()
+	void kcp::shrink_buffer()
 	{
 		if (!this->snd_buf.empty())
 		{
@@ -484,7 +484,7 @@ namespace KCP
 		}
 	}
 
-	void KCP::ParseAck(uint32_t sn)
+	void kcp::parse_ack(uint32_t sn)
 	{
 		if (_itimediff(sn, this->snd_una) < 0 || _itimediff(sn, this->snd_nxt) >= 0)
 			return;
@@ -503,7 +503,7 @@ namespace KCP
 		}
 	}
 
-	void KCP::ParseUna(uint32_t una)
+	void kcp::parse_una(uint32_t una)
 	{
 		for (auto seg = this->snd_buf.begin(); seg != this->snd_buf.end();)
 		{
@@ -518,7 +518,7 @@ namespace KCP
 		}
 	}
 
-	void KCP::ParseFastAck(uint32_t sn, uint32_t ts)
+	void kcp::parse_fast_ack(uint32_t sn, uint32_t ts)
 	{
 		if (_itimediff(sn, this->snd_una) < 0 || _itimediff(sn, this->snd_nxt) >= 0)
 			return;
@@ -560,7 +560,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// parse data
 	//---------------------------------------------------------------------
-	void KCP::ParseData(Segment &newseg)
+	void kcp::parse_data(segment &newseg)
 	{
 		uint32_t sn = newseg.sn;
 		bool repeat = false;
@@ -625,15 +625,15 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// input data
 	//---------------------------------------------------------------------
-	int KCP::Input(const char *data, long size)
+	int kcp::input(const char *data, long size)
 	{
 		uint32_t prev_una = this->snd_una;
 		uint32_t maxack = 0, latest_ts = 0;
 		int flag = 0;
 
-		if (CanLog(IKCP_LOG_INPUT))
+		if (can_log(KCP_LOG_INPUT))
 		{
-			WriteLog(IKCP_LOG_INPUT, "[RI] %d bytes", (int)size);
+			write_log(KCP_LOG_INPUT, "[RI] %d bytes", (int)size);
 		}
 
 		if (data == NULL || (int)size < (int)IKCP_OVERHEAD) return -1;
@@ -646,16 +646,16 @@ namespace KCP
 
 			if (size < (int)IKCP_OVERHEAD) break;
 
-			data = Decode32u(data, &conv);
+			data = decode32u(data, &conv);
 			if (conv != this->conv) return -1;
 
-			data = Decode8u(data, &cmd);
-			data = Decode8u(data, &frg);
-			data = Decode16u(data, &wnd);
-			data = Decode32u(data, &ts);
-			data = Decode32u(data, &sn);
-			data = Decode32u(data, &una);
-			data = Decode32u(data, &len);
+			data = decode8u(data, &cmd);
+			data = decode8u(data, &frg);
+			data = decode16u(data, &wnd);
+			data = decode32u(data, &ts);
+			data = decode32u(data, &sn);
+			data = decode32u(data, &una);
+			data = decode32u(data, &len);
 
 			size -= IKCP_OVERHEAD;
 
@@ -666,17 +666,17 @@ namespace KCP
 				return -3;
 
 			this->rmt_wnd = wnd;
-			ParseUna(una);
-			ShrinkBuffer();
+			parse_una(una);
+			shrink_buffer();
 
 			if (cmd == IKCP_CMD_ACK)
 			{
 				if (_itimediff(this->current, ts) >= 0)
 				{
-					UpdateAck(_itimediff(this->current, ts));
+					update_ack(_itimediff(this->current, ts));
 				}
-				ParseAck(sn);
-				ShrinkBuffer();
+				parse_ack(sn);
+				shrink_buffer();
 				if (flag == 0)
 				{
 					flag = 1;
@@ -699,9 +699,9 @@ namespace KCP
 #endif
 					}
 				}
-				if (CanLog(IKCP_LOG_IN_ACK))
+				if (can_log(KCP_LOG_IN_ACK))
 				{
-					WriteLog(IKCP_LOG_IN_ACK,
+					write_log(KCP_LOG_IN_ACK,
 						"input ack: sn=%lu rtt=%ld rto=%ld", (unsigned long)sn,
 						(long)_itimediff(this->current, ts),
 						(long)this->rx_rto);
@@ -709,9 +709,9 @@ namespace KCP
 			}
 			else if (cmd == IKCP_CMD_PUSH)
 			{
-				if (CanLog(IKCP_LOG_IN_DATA))
+				if (can_log(KCP_LOG_IN_DATA))
 				{
-					WriteLog(IKCP_LOG_IN_DATA,
+					write_log(KCP_LOG_IN_DATA,
 						"input psh: sn=%lu ts=%lu", (unsigned long)sn, (unsigned long)ts);
 				}
 				if (_itimediff(sn, this->rcv_nxt + this->rcv_wnd) < 0)
@@ -720,7 +720,7 @@ namespace KCP
 					this->acklist.push_back({ sn , ts });
 					if (_itimediff(sn, this->rcv_nxt) >= 0)
 					{
-						Segment seg(len);
+						segment seg(len);
 						seg.conv = conv;
 						seg.cmd = cmd;
 						seg.frg = frg;
@@ -735,7 +735,7 @@ namespace KCP
 							//memcpy(seg.data.data(), data, len);
 						}
 
-						ParseData(seg);
+						parse_data(seg);
 					}
 				}
 			}
@@ -744,17 +744,17 @@ namespace KCP
 				// ready to send back IKCP_CMD_WINS in Flush
 				// tell remote my window size
 				this->probe |= IKCP_ASK_TELL;
-				if (CanLog(IKCP_LOG_IN_PROBE))
+				if (can_log(KCP_LOG_IN_PROBE))
 				{
-					WriteLog(IKCP_LOG_IN_PROBE, "input probe");
+					write_log(KCP_LOG_IN_PROBE, "input probe");
 				}
 			}
 			else if (cmd == IKCP_CMD_WINS)
 			{
 				// do nothing
-				if (CanLog(IKCP_LOG_IN_WINS))
+				if (can_log(KCP_LOG_IN_WINS))
 				{
-					WriteLog(IKCP_LOG_IN_WINS,
+					write_log(KCP_LOG_IN_WINS,
 						"input wins: %lu", (unsigned long)(wnd));
 				}
 			}
@@ -769,7 +769,7 @@ namespace KCP
 
 		if (flag != 0)
 		{
-			ParseFastAck(maxack, latest_ts);
+			parse_fast_ack(maxack, latest_ts);
 		}
 
 		if (_itimediff(this->snd_una, prev_una) > 0)
@@ -806,7 +806,7 @@ namespace KCP
 		return 0;
 	}
 
-	int KCP::WindowUnused()
+	int kcp::window_unused()
 	{
 		if (this->rcv_queue.size() < this->rcv_wnd)
 		{
@@ -819,7 +819,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// Flush
 	//---------------------------------------------------------------------
-	void KCP::Flush()
+	void kcp::flush()
 	{
 		uint32_t current = this->current;
 		char *buffer = this->buffer.data();
@@ -833,11 +833,11 @@ namespace KCP
 		// 'Update' haven't been called. 
 		if (this->updated == 0) return;
 
-		Segment seg;
+		segment seg;
 		seg.conv = this->conv;
 		seg.cmd = IKCP_CMD_ACK;
 		seg.frg = 0;
-		seg.wnd = WindowUnused();
+		seg.wnd = window_unused();
 		seg.una = this->rcv_nxt;
 		seg.sn = 0;
 		seg.ts = 0;
@@ -848,12 +848,12 @@ namespace KCP
 			size = (int)(ptr - buffer);
 			if (size + (int)IKCP_OVERHEAD > (int)this->mtu)
 			{
-				Output(buffer, size);
+				kcp_output(buffer, size);
 				ptr = buffer;
 			}
 			seg.sn = this->acklist[i].first;
 			seg.ts = this->acklist[i].second;
-			ptr = Encode_seg(ptr, seg);
+			ptr = encode_seg(ptr, seg);
 		}
 
 		this->acklist.clear();
@@ -893,10 +893,10 @@ namespace KCP
 			size = (int)(ptr - buffer);
 			if (size + (int)IKCP_OVERHEAD > (int)this->mtu)
 			{
-				Output(buffer, size);
+				kcp_output(buffer, size);
 				ptr = buffer;
 			}
-			ptr = Encode_seg(ptr, seg);
+			ptr = encode_seg(ptr, seg);
 		}
 
 		// flush window probing commands
@@ -906,10 +906,10 @@ namespace KCP
 			size = (int)(ptr - buffer);
 			if (size + (int)IKCP_OVERHEAD > (int)this->mtu)
 			{
-				Output(buffer, size);
+				kcp_output(buffer, size);
 				ptr = buffer;
 			}
-			ptr = Encode_seg(ptr, seg);
+			ptr = encode_seg(ptr, seg);
 		}
 
 		this->probe = 0;
@@ -944,42 +944,42 @@ namespace KCP
 		rtomin = (this->nodelay == 0) ? (this->rx_rto >> 3) : 0;
 
 		// flush data segments
-		for (auto segment = this->snd_buf.begin(); segment != this->snd_buf.end(); ++segment)
+		for (auto seg_iter = this->snd_buf.begin(); seg_iter != this->snd_buf.end(); ++seg_iter)
 		{
 			bool needsend = false;
-			if (segment->xmit == 0)
+			if (seg_iter->xmit == 0)
 			{
 				needsend = true;
-				segment->xmit++;
-				segment->rto = this->rx_rto;
-				segment->resendts = current + segment->rto + rtomin;
+				seg_iter->xmit++;
+				seg_iter->rto = this->rx_rto;
+				seg_iter->resendts = current + seg_iter->rto + rtomin;
 			}
-			else if (_itimediff(current, segment->resendts) >= 0)
+			else if (_itimediff(current, seg_iter->resendts) >= 0)
 			{
 				needsend = true;
-				segment->xmit++;
+				seg_iter->xmit++;
 				this->xmit++;
 				if (this->nodelay == 0)
 				{
-					segment->rto += std::max<uint32_t>(segment->rto, static_cast<uint32_t>(this->rx_rto));
+					seg_iter->rto += std::max<uint32_t>(seg_iter->rto, static_cast<uint32_t>(this->rx_rto));
 				}
 				else
 				{
-					int32_t step = (this->nodelay < 2) ? static_cast<int32_t>(segment->rto) : this->rx_rto;
-					segment->rto += step / 2;
+					int32_t step = (this->nodelay < 2) ? static_cast<int32_t>(seg_iter->rto) : this->rx_rto;
+					seg_iter->rto += step / 2;
 				}
-				segment->resendts = current + segment->rto;
+				seg_iter->resendts = current + seg_iter->rto;
 				lost = 1;
 			}
-			else if (segment->fastack >= resent)
+			else if (seg_iter->fastack >= resent)
 			{
-				if ((int)segment->xmit <= this->fastlimit ||
+				if ((int)seg_iter->xmit <= this->fastlimit ||
 					this->fastlimit <= 0)
 				{
 					needsend = true;
-					segment->xmit++;
-					segment->fastack = 0;
-					segment->resendts = current + segment->rto;
+					seg_iter->xmit++;
+					seg_iter->fastack = 0;
+					seg_iter->resendts = current + seg_iter->rto;
 					change++;
 				}
 			}
@@ -987,29 +987,29 @@ namespace KCP
 			if (needsend)
 			{
 				int need;
-				segment->ts = current;
-				segment->wnd = seg.wnd;
-				segment->una = this->rcv_nxt;
+				seg_iter->ts = current;
+				seg_iter->wnd = seg.wnd;
+				seg_iter->una = this->rcv_nxt;
 
 				size = (int)(ptr - buffer);
-				need = IKCP_OVERHEAD + static_cast<int>(segment->data.size());
+				need = IKCP_OVERHEAD + static_cast<int>(seg_iter->data.size());
 
 				if (size + need > (int)this->mtu)
 				{
-					Output(buffer, size);
+					kcp_output(buffer, size);
 					ptr = buffer;
 				}
 
-				ptr = Encode_seg(ptr, *segment);
+				ptr = encode_seg(ptr, *seg_iter);
 
-				if (segment->data.size() > 0)
+				if (seg_iter->data.size() > 0)
 				{
-					std::copy(segment->data.begin(), segment->data.end(), ptr);
+					std::copy(seg_iter->data.begin(), seg_iter->data.end(), ptr);
 					//memcpy(ptr, segment->data.data(), segment->data.size());
-					ptr += segment->data.size();
+					ptr += seg_iter->data.size();
 				}
 
-				if (segment->xmit >= this->dead_link)
+				if (seg_iter->xmit >= this->dead_link)
 				{
 					this->state = (uint32_t)-1;
 				}
@@ -1017,10 +1017,10 @@ namespace KCP
 		}
 
 		// flash remain segments
-		size = (int)(ptr - buffer);
+		size = static_cast<int>(ptr - buffer);
 		if (size > 0)
 		{
-			Output(buffer, size);
+			kcp_output(buffer, size);
 		}
 
 		// update ssthresh
@@ -1053,10 +1053,10 @@ namespace KCP
 
 	//---------------------------------------------------------------------
 	// update state (call it repeatedly, every 10ms-100ms), or you can ask 
-	// Check() when to call it again (without Input/Send calling).
+	// check() when to call it again (without Input/Send calling).
 	// 'current' - current timestamp in millisec. 
 	//---------------------------------------------------------------------
-	void KCP::Update(uint32_t current)
+	void kcp::update(uint32_t current)
 	{
 		this->current = current;
 
@@ -1081,7 +1081,7 @@ namespace KCP
 			{
 				this->ts_flush = this->current + this->interval;
 			}
-			Flush();
+			flush();
 		}
 	}
 
@@ -1095,7 +1095,7 @@ namespace KCP
 	// schedule Update (eg. implementing an epoll-like mechanism, 
 	// or optimize Update when handling massive kcp connections)
 	//---------------------------------------------------------------------
-	uint32_t KCP::Check(uint32_t current)
+	uint32_t kcp::check(uint32_t current)
 	{
 		uint32_t ts_flush = this->ts_flush;
 		int32_t tm_flush = 0x7fffffff;
@@ -1135,7 +1135,7 @@ namespace KCP
 		return current + minimal;
 	}
 
-	int KCP::SetMTU(int mtu)
+	int kcp::set_mtu(int mtu)
 	{
 		if (mtu < 50 || mtu < (int)IKCP_OVERHEAD)
 			return -1;
@@ -1147,12 +1147,12 @@ namespace KCP
 		return 0;
 	}
 	
-	int KCP::GetMTU()
+	int kcp::get_mtu()
 	{
 		return this->mtu;
 	}
 
-	int KCP::Interval(int interval)
+	int kcp::get_interval(int interval)
 	{
 		if (interval > 5000) interval = 5000;
 		else if (interval < 10) interval = 10;
@@ -1160,7 +1160,7 @@ namespace KCP
 		return 0;
 	}
 
-	int KCP::NoDelay(int nodelay, int interval, int resend, int nc)
+	int kcp::no_delay(int nodelay, int interval, int resend, int nc)
 	{
 		if (nodelay >= 0)
 		{
@@ -1192,7 +1192,7 @@ namespace KCP
 	}
 
 
-	void KCP::SetWindowSize(int sndwnd, int rcvwnd)
+	void kcp::set_window_size(int sndwnd, int rcvwnd)
 	{
 		if (sndwnd > 0)
 		{
@@ -1204,41 +1204,41 @@ namespace KCP
 		}
 	}
 
-	void KCP::GetWindowSize(int &sndwnd, int &rcvwnd)
+	void kcp::get_window_size(int &sndwnd, int &rcvwnd)
 	{
 		sndwnd = this->snd_wnd;
 		rcvwnd = this->rcv_wnd;
 	}
 
-	int KCP::WaitingForSend()
+	int kcp::waiting_for_send()
 	{
 		return static_cast<int>(this->snd_buf.size() + this->snd_queue.size());
 	}
 
 	// read conv
-	uint32_t KCP::GetConv(const void *ptr)
+	uint32_t kcp::get_conv(const void *ptr)
 	{
 		uint32_t conv;
-		Decode32u(static_cast<const char*>(ptr), &conv);
+		decode32u(static_cast<const char*>(ptr), &conv);
 		return conv;
 	}
 
-	uint32_t KCP::GetConv()
+	uint32_t kcp::get_conv()
 	{
 		return this->conv;
 	}
 
-	void KCP::SetStreamMode(bool enable)
+	void kcp::set_stream_mode(bool enable)
 	{
 		this->stream = enable;
 	}
 
-	int32_t& KCP::RxMinRTO()
+	int32_t& kcp::rx_min_rto()
 	{
 		return this->rx_minrto;
 	}
 
-	int& KCP::LogMask()
+	int& kcp::log_mask()
 	{
 		return this->logmask;
 	}

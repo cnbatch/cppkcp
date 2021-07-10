@@ -38,7 +38,7 @@
 #endif
 
 
-namespace KCP
+namespace kcp
 {
 	//---------------------------------------------------------------------
 	// BYTE ORDER & ALIGNMENT
@@ -76,26 +76,25 @@ namespace KCP
 #endif
 #endif
 
-
-#define IKCP_LOG_OUTPUT			1
-#define IKCP_LOG_INPUT			2
-#define IKCP_LOG_SEND			4
-#define IKCP_LOG_RECV			8
-#define IKCP_LOG_IN_DATA		16
-#define IKCP_LOG_IN_ACK			32
-#define IKCP_LOG_IN_PROBE		64
-#define IKCP_LOG_IN_WINS		128
-#define IKCP_LOG_OUT_DATA		256
-#define IKCP_LOG_OUT_ACK		512
-#define IKCP_LOG_OUT_PROBE		1024
-#define IKCP_LOG_OUT_WINS		2048
+	constexpr int KCP_LOG_OUTPUT    =    1;
+	constexpr int KCP_LOG_INPUT     =    2;
+	constexpr int KCP_LOG_SEND      =    4;
+	constexpr int KCP_LOG_RECV      =    8;
+	constexpr int KCP_LOG_IN_DATA   =   16;
+	constexpr int KCP_LOG_IN_ACK    =   32;
+	constexpr int KCP_LOG_IN_PROBE  =   64;
+	constexpr int KCP_LOG_IN_WINS   =  128;
+	constexpr int KCP_LOG_OUT_DATA  =  256;
+	constexpr int KCP_LOG_OUT_ACK   =  512;
+	constexpr int KCP_LOG_OUT_PROBE = 1024;
+	constexpr int KCP_LOG_OUT_WINS  = 2048;
 
 	namespace internal_impl
 	{
 		//=====================================================================
 		// SEGMENT
 		//=====================================================================
-		struct Segment
+		struct segment
 		{
 			uint32_t conv = 0;
 			uint32_t cmd = 0;
@@ -110,8 +109,8 @@ namespace KCP
 			uint32_t xmit = 0;
 			std::vector<char> data;
 
-			Segment() = default;
-			Segment(size_t sizes)
+			segment() = default;
+			segment(size_t sizes)
 			{
 				data.resize(sizes);
 			}
@@ -121,7 +120,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// KCP
 	//---------------------------------------------------------------------
-	class KCP
+	class kcp
 	{
 	private:
 		uint32_t conv, mtu, mss, state;
@@ -133,10 +132,10 @@ namespace KCP
 		uint32_t nodelay, updated;
 		uint32_t ts_probe, probe_wait;
 		uint32_t dead_link, incr;
-		std::list<internal_impl::Segment> snd_queue;
-		std::list<internal_impl::Segment> rcv_queue;
-		std::list<internal_impl::Segment> snd_buf;
-		std::list<internal_impl::Segment> rcv_buf;
+		std::list<internal_impl::segment> snd_queue;
+		std::list<internal_impl::segment> rcv_queue;
+		std::list<internal_impl::segment> snd_buf;
+		std::list<internal_impl::segment> rcv_buf;
 		std::vector<std::pair<uint32_t, uint32_t>> acklist;
 		uint32_t ackblock;
 		void *user;
@@ -148,14 +147,14 @@ namespace KCP
 		std::function<int(const char *, int, void *)> output;	// int(*output)(const char *buf, int len, void *user)
 		std::function<void(const char *, void *)> writelog;	//void(*writelog)(const char *log, void *user)
 
-		static char * Encode8u(char *p, unsigned char c);
-		static const char * Decode8u(const char *p, unsigned char *c);
-		static char * Encode16u(char *p, unsigned short w);
-		static const char * Decode16u(const char *p, unsigned short *w);
-		static char * Encode32u(char *p, uint32_t l);
-		static const char * Decode32u(const char *p, uint32_t *l);
-		static char * Encode_seg(char *ptr, const internal_impl::Segment &seg);
-		void PrintQueue(const char *name, const std::list<internal_impl::Segment> &segment);
+		static char * encode8u(char *p, unsigned char c);
+		static const char * decode8u(const char *p, unsigned char *c);
+		static char * encode16u(char *p, unsigned short w);
+		static const char * decode16u(const char *p, unsigned short *w);
+		static char * encode32u(char *p, uint32_t l);
+		static const char * decode32u(const char *p, uint32_t *l);
+		static char * encode_seg(char *ptr, const internal_impl::segment &seg);
+		void print_queue(const char *name, const std::list<internal_impl::segment> &segment);
 
 	public:
 		//---------------------------------------------------------------------
@@ -165,26 +164,26 @@ namespace KCP
 		// create a new kcp control object, 'conv' must equal in two endpoint
 		// from the same connection. 'user' will be passed to the output callback
 		// output callback can be setup like this: 'kcp->output = my_udp_output'
-		KCP(uint32_t conv, void *user);
+		kcp(uint32_t conv, void *user);
 
 		// release kcp control object
-		~KCP();
+		~kcp();
 
 		// set output callback, which will be invoked by kcp
 		// int(*output)(const char *buf, int len, void *user)
-		void SetOutput(std::function<int(const char *, int, void *)> output);
+		void set_output(std::function<int(const char *, int, void *)> output);
 
 		// user/upper level recv: returns size, returns below zero for EAGAIN
-		int Receive(char *buffer, int len);
-		int Receive(std::vector<char> &buffer);
+		int receive(char *buffer, int len);
+		int receive(std::vector<char> &buffer);
 
 		// user/upper level send, returns below zero for error
-		int Send(const char *buffer, int len);
+		int send(const char *buffer, int len);
 
 		// update state (call it repeatedly, every 10ms-100ms), or you can ask 
-		// Check when to call it again (without Input/_send calling).
+		// check when to call it again (without Input/_send calling).
 		// 'current' - current timestamp in millisec. 
-		void Update(uint32_t current);
+		void update(uint32_t current);
 
 		// Determine when should you invoke Update:
 		// returns when you should invoke Update in millisec, if there 
@@ -193,62 +192,62 @@ namespace KCP
 		// Important to reduce unnacessary Update invoking. use it to 
 		// schedule Update (eg. implementing an epoll-like mechanism, 
 		// or optimize Update when handling massive kcp connections)
-		uint32_t Check(uint32_t current);
+		uint32_t check(uint32_t current);
 
 		// when you received a low level packet (eg. UDP packet), call it
-		int Input(const char *data, long size);
+		int input(const char *data, long size);
 
 		// flush pending data
-		void Flush();
+		void flush();
 
 		// check the size of next message in the recv queue
 		int PeekSize();
 
 		// change MTU size, default is 1400
-		int SetMTU(int mtu);
-		int GetMTU();
+		int set_mtu(int mtu);
+		int get_mtu();
 
 		// set maximum window size: sndwnd=32, rcvwnd=32 by default
-		void SetWindowSize(int sndwnd, int rcvwnd);
-		void GetWindowSize(int &sndwnd, int &rcvwnd);
+		void set_window_size(int sndwnd, int rcvwnd);
+		void get_window_size(int &sndwnd, int &rcvwnd);
 
 		// get how many packet is waiting to be sent
-		int WaitingForSend();
+		int waiting_for_send();
 
-		// fastest: NoDelay(1, 20, 2, 1)
+		// fastest: no_delay(1, 20, 2, 1)
 		// nodelay: 0:disable(default), 1:enable
 		// interval: internal update timer interval in millisec, default is 100ms 
 		// resend: 0:disable fast resend(default), 1:enable fast resend
 		// nc: 0:normal congestion control(default), 1:disable congestion control
-		int NoDelay(int nodelay, int interval, int resend, int nc);
+		int no_delay(int nodelay, int interval, int resend, int nc);
 
 
-		void WriteLog(int mask, const char *fmt, ...);
+		void write_log(int mask, const char *fmt, ...);
 
 		// read conv
-		static uint32_t GetConv(const void *ptr);
-		uint32_t GetConv();
+		static uint32_t get_conv(const void *ptr);
+		uint32_t get_conv();
 
 		// check log mask
-		bool CanLog(int mask);
+		bool can_log(int mask);
 
-		int Interval(int interval);
+		int get_interval(int interval);
 
-		void SetStreamMode(bool enable);
+		void set_stream_mode(bool enable);
 
-		int32_t& RxMinRTO();
-		int& LogMask();
+		int32_t& rx_min_rto();
+		int& log_mask();
 
 	protected:
 
-		int Output(const void *data, int size);
-		void UpdateAck(int32_t rtt);
-		void ShrinkBuffer();
-		void ParseAck(uint32_t sn);
-		void ParseUna(uint32_t una);
-		void ParseFastAck(uint32_t sn, uint32_t ts);
-		void ParseData(internal_impl::Segment &newseg);
-		int WindowUnused();
+		int kcp_output(const void *data, int size);
+		void update_ack(int32_t rtt);
+		void shrink_buffer();
+		void parse_ack(uint32_t sn);
+		void parse_una(uint32_t una);
+		void parse_fast_ack(uint32_t sn, uint32_t ts);
+		void parse_data(internal_impl::segment &newseg);
+		int window_unused();
 	};
 }
 

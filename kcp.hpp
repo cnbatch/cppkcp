@@ -38,7 +38,7 @@
 #endif
 
 
-namespace kcp
+namespace KCP
 {
 	//---------------------------------------------------------------------
 	// BYTE ORDER & ALIGNMENT
@@ -76,25 +76,26 @@ namespace kcp
 #endif
 #endif
 
-	constexpr int KCP_LOG_OUTPUT    =    1;
-	constexpr int KCP_LOG_INPUT     =    2;
-	constexpr int KCP_LOG_SEND      =    4;
-	constexpr int KCP_LOG_RECV      =    8;
-	constexpr int KCP_LOG_IN_DATA   =   16;
-	constexpr int KCP_LOG_IN_ACK    =   32;
-	constexpr int KCP_LOG_IN_PROBE  =   64;
-	constexpr int KCP_LOG_IN_WINS   =  128;
-	constexpr int KCP_LOG_OUT_DATA  =  256;
-	constexpr int KCP_LOG_OUT_ACK   =  512;
-	constexpr int KCP_LOG_OUT_PROBE = 1024;
-	constexpr int KCP_LOG_OUT_WINS  = 2048;
+
+#define IKCP_LOG_OUTPUT			1
+#define IKCP_LOG_INPUT			2
+#define IKCP_LOG_SEND			4
+#define IKCP_LOG_RECV			8
+#define IKCP_LOG_IN_DATA		16
+#define IKCP_LOG_IN_ACK			32
+#define IKCP_LOG_IN_PROBE		64
+#define IKCP_LOG_IN_WINS		128
+#define IKCP_LOG_OUT_DATA		256
+#define IKCP_LOG_OUT_ACK		512
+#define IKCP_LOG_OUT_PROBE		1024
+#define IKCP_LOG_OUT_WINS		2048
 
 	namespace internal_impl
 	{
 		//=====================================================================
 		// SEGMENT
 		//=====================================================================
-		struct segment
+		struct Segment
 		{
 			uint32_t conv = 0;
 			uint32_t cmd = 0;
@@ -109,10 +110,37 @@ namespace kcp
 			uint32_t xmit = 0;
 			std::vector<char> data;
 
-			segment() = default;
-			segment(size_t sizes)
+			Segment() = default;
+			Segment(size_t sizes)
 			{
 				data.resize(sizes);
+			}
+
+			Segment(Segment &&other) noexcept
+			{
+				MoveSegment(other);
+			}
+
+			Segment operator=(Segment &&other) noexcept
+			{
+				MoveSegment(other);
+			}
+
+		private:
+			void MoveSegment(Segment &other) noexcept
+			{
+				this->conv = other.conv;
+				this->cmd = other.cmd;
+				this->frg = other.frg;
+				this->wnd = other.wnd;
+				this->ts = other.ts;
+				this->sn = other.sn;
+				this->una = other.una;
+				this->resendts = other.resendts;
+				this->rto = other.rto;
+				this->fastack = other.fastack;
+				this->xmit = other.xmit;
+				this->data = std::move(other.data);
 			}
 		};
 	}
@@ -120,7 +148,7 @@ namespace kcp
 	//---------------------------------------------------------------------
 	// KCP
 	//---------------------------------------------------------------------
-	class kcp
+	class KCP
 	{
 	private:
 		uint32_t conv, mtu, mss, state;
@@ -132,10 +160,10 @@ namespace kcp
 		uint32_t nodelay, updated;
 		uint32_t ts_probe, probe_wait;
 		uint32_t dead_link, incr;
-		std::list<internal_impl::segment> snd_queue;
-		std::list<internal_impl::segment> rcv_queue;
-		std::list<internal_impl::segment> snd_buf;
-		std::list<internal_impl::segment> rcv_buf;
+		std::list<internal_impl::Segment> snd_queue;
+		std::list<internal_impl::Segment> rcv_queue;
+		std::list<internal_impl::Segment> snd_buf;
+		std::list<internal_impl::Segment> rcv_buf;
 		std::vector<std::pair<uint32_t, uint32_t>> acklist;
 		uint32_t ackblock;
 		void *user;
@@ -147,16 +175,25 @@ namespace kcp
 		std::function<int(const char *, int, void *)> output;	// int(*output)(const char *buf, int len, void *user)
 		std::function<void(const char *, void *)> writelog;	//void(*writelog)(const char *log, void *user)
 
-		static char * encode8u(char *p, unsigned char c);
-		static const char * decode8u(const char *p, unsigned char *c);
-		static char * encode16u(char *p, unsigned short w);
-		static const char * decode16u(const char *p, unsigned short *w);
-		static char * encode32u(char *p, uint32_t l);
-		static const char * decode32u(const char *p, uint32_t *l);
-		static char * encode_seg(char *ptr, const internal_impl::segment &seg);
-		void print_queue(const char *name, const std::list<internal_impl::segment> &segment);
+		static char * Encode8u(char *p, unsigned char c);
+		static const char * Decode8u(const char *p, unsigned char *c);
+		static char * Encode16u(char *p, unsigned short w);
+		static const char * Decode16u(const char *p, unsigned short *w);
+		static char * Encode32u(char *p, uint32_t l);
+		static const char * Decode32u(const char *p, uint32_t *l);
+		static char * Encode_seg(char *ptr, const internal_impl::Segment &seg);
+		void PrintQueue(const char *name, const std::list<internal_impl::Segment> &segment);
+		void Initialise(uint32_t conv, void *user);
+		void MoveKCP(KCP &other) noexcept;
 
 	public:
+		KCP() { Initialise(0, (void*)0); }
+
+		KCP(const KCP &other) noexcept;
+
+		KCP(KCP &&other) noexcept { MoveKCP(other); }
+
+		KCP operator=(KCP &&other) noexcept { MoveKCP(other); return *this; }
 		//---------------------------------------------------------------------
 		// interface
 		//---------------------------------------------------------------------
@@ -164,26 +201,26 @@ namespace kcp
 		// create a new kcp control object, 'conv' must equal in two endpoint
 		// from the same connection. 'user' will be passed to the output callback
 		// output callback can be setup like this: 'kcp->output = my_udp_output'
-		kcp(uint32_t conv, void *user);
+		KCP(uint32_t conv, void *user) { Initialise(conv, user); }
 
 		// release kcp control object
-		~kcp();
+		~KCP() = default;
 
 		// set output callback, which will be invoked by kcp
 		// int(*output)(const char *buf, int len, void *user)
-		void set_output(std::function<int(const char *, int, void *)> output);
+		void SetOutput(std::function<int(const char *, int, void *)> output);
 
 		// user/upper level recv: returns size, returns below zero for EAGAIN
-		int receive(char *buffer, int len);
-		int receive(std::vector<char> &buffer);
+		int Receive(char *buffer, int len);
+		int Receive(std::vector<char> &buffer);
 
 		// user/upper level send, returns below zero for error
-		int send(const char *buffer, int len);
+		int Send(const char *buffer, int len);
 
 		// update state (call it repeatedly, every 10ms-100ms), or you can ask 
-		// check when to call it again (without Input/_send calling).
+		// Check when to call it again (without Input/_send calling).
 		// 'current' - current timestamp in millisec. 
-		void update(uint32_t current);
+		void Update(uint32_t current);
 
 		// Determine when should you invoke Update:
 		// returns when you should invoke Update in millisec, if there 
@@ -192,62 +229,62 @@ namespace kcp
 		// Important to reduce unnacessary Update invoking. use it to 
 		// schedule Update (eg. implementing an epoll-like mechanism, 
 		// or optimize Update when handling massive kcp connections)
-		uint32_t check(uint32_t current);
+		uint32_t Check(uint32_t current);
 
 		// when you received a low level packet (eg. UDP packet), call it
-		int input(const char *data, long size);
+		int Input(const char *data, long size);
 
 		// flush pending data
-		void flush();
+		void Flush();
 
 		// check the size of next message in the recv queue
 		int PeekSize();
 
 		// change MTU size, default is 1400
-		int set_mtu(int mtu);
-		int get_mtu();
+		int SetMTU(int mtu);
+		int GetMTU();
 
 		// set maximum window size: sndwnd=32, rcvwnd=32 by default
-		void set_window_size(int sndwnd, int rcvwnd);
-		void get_window_size(int &sndwnd, int &rcvwnd);
+		void SetWindowSize(int sndwnd, int rcvwnd);
+		void GetWindowSize(int &sndwnd, int &rcvwnd);
 
 		// get how many packet is waiting to be sent
-		int waiting_for_send();
+		int WaitingForSend();
 
-		// fastest: no_delay(1, 20, 2, 1)
+		// fastest: NoDelay(1, 20, 2, 1)
 		// nodelay: 0:disable(default), 1:enable
 		// interval: internal update timer interval in millisec, default is 100ms 
 		// resend: 0:disable fast resend(default), 1:enable fast resend
 		// nc: 0:normal congestion control(default), 1:disable congestion control
-		int no_delay(int nodelay, int interval, int resend, int nc);
+		int NoDelay(int nodelay, int interval, int resend, int nc);
 
 
-		void write_log(int mask, const char *fmt, ...);
+		void WriteLog(int mask, const char *fmt, ...);
 
 		// read conv
-		static uint32_t get_conv(const void *ptr);
-		uint32_t get_conv();
+		static uint32_t GetConv(const void *ptr);
+		uint32_t GetConv();
 
 		// check log mask
-		bool can_log(int mask);
+		bool CanLog(int mask);
 
-		int get_interval(int interval);
+		int Interval(int interval);
 
-		void set_stream_mode(bool enable);
+		void SetStreamMode(bool enable);
 
-		int32_t& rx_min_rto();
-		int& log_mask();
+		int32_t& RxMinRTO();
+		int& LogMask();
 
 	protected:
 
-		int kcp_output(const void *data, int size);
-		void update_ack(int32_t rtt);
-		void shrink_buffer();
-		void parse_ack(uint32_t sn);
-		void parse_una(uint32_t una);
-		void parse_fast_ack(uint32_t sn, uint32_t ts);
-		void parse_data(internal_impl::segment &newseg);
-		int window_unused();
+		int Output(const void *data, int size);
+		void UpdateAck(int32_t rtt);
+		void ShrinkBuffer();
+		void ParseAck(uint32_t sn);
+		void ParseUna(uint32_t una);
+		void ParseFastAck(uint32_t sn, uint32_t ts);
+		void ParseData(internal_impl::Segment &newseg);
+		int WindowUnused();
 	};
 }
 

@@ -215,7 +215,7 @@ namespace KCP
 		this->probe = 0;
 		this->mtu = IKCP_MTU_DEF;
 		this->mss = this->mtu - IKCP_OVERHEAD;
-		this->stream = 0;
+		this->stream = false;
 
 		this->buffer.resize(static_cast<size_t>(this->mtu) + IKCP_OVERHEAD);
 
@@ -234,7 +234,7 @@ namespace KCP
 		this->ssthresh = IKCP_THRESH_INIT;
 		this->fastresend = 0;
 		this->fastlimit = IKCP_FASTACK_LIMIT;
-		this->nocwnd = 0;
+		this->nocwnd = false;
 		this->xmit = 0;
 		this->dead_link = IKCP_DEADLINK;
 	}
@@ -457,22 +457,22 @@ namespace KCP
 	//---------------------------------------------------------------------
 	// user/upper level send, returns below zero for error
 	//---------------------------------------------------------------------
-	int KCP::Send(const char *buffer, int len)
+	int KCP::Send(const char *buffer, size_t len)
 	{
 		assert(this->mss > 0);
-		if (len < 0) return -1;
+		//if (len < 0) return -1;
 
 		// append to previous segment in streaming mode (if possible)
-		if (this->stream != 0)
+		if (this->stream)
 		{
 			if (!this->snd_queue.empty())
 			{
 				auto &seg = this->snd_queue.back();
 				if (seg.data.size() < this->mss)
 				{
-					int capacity = this->mss - static_cast<int>(seg.data.size());
-					int extend = (len < capacity) ? len : capacity;
-					auto old_size = seg.data.size();
+					size_t capacity = static_cast<size_t>(this->mss) - seg.data.size();
+					size_t extend = (len < capacity) ? len : capacity;
+					size_t old_size = seg.data.size();
 					seg.data.resize(seg.data.size() + extend);
 					//memcpy(seg->data.data(), old->data.data(), old->data.size());
 					if (buffer)
@@ -491,19 +491,19 @@ namespace KCP
 			}
 		}
 
-		int count;
+		uint32_t count;
 
-		if (len <= (int64_t)this->mss) count = 1;
+		if (len <= this->mss) count = 1;
 		else count = (len + this->mss - 1) / this->mss;
 
-		if (count >= (int64_t)IKCP_WND_RCV) return -2;
+		if (count >= IKCP_WND_RCV) return -2;
 
 		if (count == 0) count = 1;
 
 		// fragment
-		for (int i = 0; i < count; i++)
+		for (uint32_t i = 0; i < count; i++)
 		{
-			int size = len > (int)this->mss ? (int)this->mss : len;
+			size_t size = len > !!this->mss ? this->mss : len;
 			this->snd_queue.emplace_back(Segment(size));
 			auto &seg = snd_queue.back();
 			if (buffer && len > 0)
@@ -511,7 +511,7 @@ namespace KCP
 				std::copy_n(buffer, size, seg.data.begin());
 				//memcpy(seg.data.data(), buffer, size);
 			}
-			seg.frg = (this->stream == 0) ? (count - i - 1) : 0;
+			seg.frg = this->stream ? 0 : (count - i - 1);
 			if (buffer)
 			{
 				buffer += size;
@@ -990,7 +990,7 @@ namespace KCP
 
 		// calculate window size
 		cwnd = std::min<uint32_t>(this->snd_wnd, this->rmt_wnd);
-		if (this->nocwnd == 0) cwnd = std::min<uint32_t>(this->cwnd, cwnd);
+		if (this->nocwnd == false) cwnd = std::min<uint32_t>(this->cwnd, cwnd);
 
 		// move data from snd_queue to snd_buf
 		while (_itimediff(this->snd_nxt, this->snd_una + cwnd) < 0)
@@ -1234,7 +1234,7 @@ namespace KCP
 		return 0;
 	}
 
-	int KCP::NoDelay(int nodelay, int interval, int resend, int nc)
+	int KCP::NoDelay(int nodelay, int interval, int resend, bool nc)
 	{
 		if (nodelay >= 0)
 		{
@@ -1258,10 +1258,7 @@ namespace KCP
 		{
 			this->fastresend = resend;
 		}
-		if (nc >= 0)
-		{
-			this->nocwnd = nc;
-		}
+		this->nocwnd = nc;
 		return 0;
 	}
 

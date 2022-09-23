@@ -170,7 +170,7 @@ namespace KCP
 		std::vector<char> buffer;
 		int fastresend;
 		int fastlimit;
-		int nocwnd, stream;
+		bool nocwnd, stream;
 		int logmask;
 		std::function<int(const char *, int, void *)> output;	// int(*output)(const char *buf, int len, void *user)
 		std::function<void(const char *, void *)> writelog;	//void(*writelog)(const char *log, void *user)
@@ -215,7 +215,7 @@ namespace KCP
 		int Receive(std::vector<char> &buffer);
 
 		// user/upper level send, returns below zero for error
-		int Send(const char *buffer, int len);
+		int Send(const char *buffer, size_t len);
 
 		// update state (call it repeatedly, every 10ms-100ms), or you can ask 
 		// Check when to call it again (without Input/_send calling).
@@ -256,7 +256,7 @@ namespace KCP
 		// interval: internal update timer interval in millisec, default is 100ms 
 		// resend: 0:disable fast resend(default), 1:enable fast resend
 		// nc: 0:normal congestion control(default), 1:disable congestion control
-		int NoDelay(int nodelay, int interval, int resend, int nc);
+		int NoDelay(int nodelay, int interval, int resend, bool nc);
 
 
 		void WriteLog(int mask, const char *fmt, ...);

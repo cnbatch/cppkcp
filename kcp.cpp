@@ -493,10 +493,10 @@ namespace KCP
 
 		int count;
 
-		if (len <= (int)this->mss) count = 1;
+		if (len <= (int64_t)this->mss) count = 1;
 		else count = (len + this->mss - 1) / this->mss;
 
-		if (count >= (int)IKCP_WND_RCV) return -2;
+		if (count >= (int64_t)IKCP_WND_RCV) return -2;
 
 		if (count == 0) count = 1;
 

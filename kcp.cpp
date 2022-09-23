@@ -126,9 +126,9 @@ namespace KCP
 	}
 
 	//---------------------------------------------------------------------
-	// Encode_seg
+	// EncodeSegment
 	//---------------------------------------------------------------------
-	char * KCP::Encode_seg(char *ptr, const Segment &seg)
+	char* KCP::EncodeSegment(char *ptr, const Segment &seg)
 	{
 		ptr = Encode32u(ptr, seg.conv);
 		ptr = Encode8u(ptr, static_cast<uint8_t>(seg.cmd));
@@ -927,7 +927,7 @@ namespace KCP
 			}
 			seg.sn = this->acklist[i].first;
 			seg.ts = this->acklist[i].second;
-			ptr = Encode_seg(ptr, seg);
+			ptr = EncodeSegment(ptr, seg);
 		}
 
 		this->acklist.clear();
@@ -970,7 +970,7 @@ namespace KCP
 				Output(buffer, size);
 				ptr = buffer;
 			}
-			ptr = Encode_seg(ptr, seg);
+			ptr = EncodeSegment(ptr, seg);
 		}
 
 		// flush window probing commands
@@ -983,7 +983,7 @@ namespace KCP
 				Output(buffer, size);
 				ptr = buffer;
 			}
-			ptr = Encode_seg(ptr, seg);
+			ptr = EncodeSegment(ptr, seg);
 		}
 
 		this->probe = 0;
@@ -1074,7 +1074,7 @@ namespace KCP
 					ptr = buffer;
 				}
 
-				ptr = Encode_seg(ptr, *segment);
+				ptr = EncodeSegment(ptr, *segment);
 
 				if (segment->data.size() > 0)
 				{

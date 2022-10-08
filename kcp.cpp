@@ -503,7 +503,7 @@ namespace KCP
 		// fragment
 		for (uint32_t i = 0; i < count; i++)
 		{
-			size_t size = len > !!this->mss ? this->mss : len;
+			size_t size = len > this->mss ? this->mss : len;
 			this->snd_queue.emplace_back(Segment(size));
 			auto &seg = snd_queue.back();
 			if (buffer && len > 0)

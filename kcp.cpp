@@ -1274,7 +1274,7 @@ namespace KCP
 		{
 			this->fastresend = resend;
 		}
-		this->nocwnd = nc;
+		this->nocwnd.store(nc);
 		return 0;
 	}
 

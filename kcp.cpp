@@ -179,7 +179,6 @@ namespace KCP
 		}
 		if (size == 0)
 			return 0;
-		this->last_active.store(this->current.load());
 
 		return this->output((const char*)data, size, this->user);
 	}
@@ -223,7 +222,6 @@ namespace KCP
 		this->buffer.resize(static_cast<size_t>(this->mtu) + IKCP_OVERHEAD);
 
 		this->state = 0;
-		this->last_active.store(0);
 		this->rx_srtt = 0;
 		this->rx_rttval = 0;
 		this->rx_rto = IKCP_RTO_DEF;
@@ -266,7 +264,6 @@ namespace KCP
 		this->buffer = std::move(other.buffer);
 
 		this->state = other.state;
-		this->last_active.store(other.last_active);
 		this->rx_srtt = other.rx_srtt;
 		this->rx_rttval = other.rx_rttval;
 		this->rx_rto = other.rx_rto;
@@ -309,7 +306,6 @@ namespace KCP
 		this->buffer = other.buffer;
 
 		this->state = other.state;
-		this->last_active.store(other.last_active);
 		this->rx_srtt = other.rx_srtt;
 		this->rx_rttval = other.rx_rttval;
 		this->rx_rto = other.rx_rto;
@@ -723,7 +719,6 @@ namespace KCP
 		}
 
 		if (data == NULL || (int)size < (int)IKCP_OVERHEAD) return -1;
-		this->last_active.store(this->current.load());
 
 		while (1)
 		{

@@ -1,4 +1,4 @@
-KCP in C++ - Simply re-write iKCP to support STL containers.
+KCP in C++ : Thread-safe iKCP
 ======================================
 
 Original Author of KCP: [skywind3000](https://github.com/skywind3000/kcp) 
@@ -9,8 +9,12 @@ Original Author of KCP: [skywind3000](https://github.com/skywind3000/kcp)
 
 现在 `ikcp_recv` (新名字：`KCP::Receive`) 可以接受空 `std::vector` 并自动扩充 `vector` 的容量。
 
+**线程安全**，可以同时收发。
+
 # Overview
 
 Modified KCP source code in C++ style. Original's manual Linked list is replaced with STL container.
 
 `ikcp_recv` (New name: `KCP::Receive`) can now accept an empty `std::vector`. The size of this `vector` will be extended automatically.
+
+**Thread-safe**, KCP can now send and receive data simultaneously.

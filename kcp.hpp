@@ -19,6 +19,7 @@
 #include <cassert>
 #include <functional>
 #include <list>
+#include <shared_mutex>
 #include <vector>
 
 
@@ -152,26 +153,31 @@ namespace KCP
 	{
 	private:
 		uint32_t conv, mtu, mss, state;
-		uint32_t snd_una, snd_nxt, rcv_nxt;
+		std::atomic<uint32_t> snd_una, snd_nxt, rcv_nxt;
 		uint32_t ts_recent, ts_lastack, ssthresh;
 		int32_t rx_rttval, rx_srtt, rx_rto, rx_minrto;
-		uint32_t snd_wnd, rcv_wnd, rmt_wnd, cwnd, probe;
-		uint32_t current, interval, ts_flush, xmit;
-		uint32_t nodelay, updated;
+		std::atomic<uint32_t> snd_wnd, rcv_wnd, rmt_wnd, cwnd, probe;
+		std::atomic<uint32_t> current, interval, ts_flush, xmit;
+		uint32_t nodelay;
 		uint32_t ts_probe, probe_wait;
-		uint32_t dead_link, incr;
+		uint32_t dead_link;
+		std::atomic<uint32_t> incr;
 		std::list<internal_impl::Segment> snd_queue;
 		std::list<internal_impl::Segment> rcv_queue;
 		std::list<internal_impl::Segment> snd_buf;
 		std::list<internal_impl::Segment> rcv_buf;
 		std::vector<std::pair<uint32_t, uint32_t>> acklist;
-		uint32_t ackblock;
-		void *user;
-		std::vector<char> buffer;
+		std::atomic<uint32_t> last_active;
+		std::atomic<void*> user;
 		int fastresend;
 		int fastlimit;
-		bool nocwnd, stream;
+		bool stream;
+		std::atomic<bool> nocwnd, updated;
+		std::vector<char> buffer;
 		int logmask;
+		std::shared_mutex mtx_rcv;
+		std::shared_mutex mtx_snd;
+		std::shared_mutex mtx_ack;
 		std::function<int(const char *, int, void *)> output;	// int(*output)(const char *buf, int len, void *user)
 		std::function<void(const char *, void *)> writelog;	//void(*writelog)(const char *log, void *user)
 
@@ -187,6 +193,7 @@ namespace KCP
 		void MoveKCP(KCP &other) noexcept;
 
 	public:
+
 		KCP() { Initialise(0, (void*)0); }
 
 		KCP(const KCP &other) noexcept;
@@ -204,7 +211,7 @@ namespace KCP
 		KCP(uint32_t conv, void *user) { Initialise(conv, user); }
 
 		// release kcp control object
-		~KCP() = default;
+		~KCP() { printf("KCP %lu Released\n", this->conv); };
 
 		// set output callback, which will be invoked by kcp
 		// int(*output)(const char *buf, int len, void *user)
@@ -231,6 +238,8 @@ namespace KCP
 		// or optimize Update when handling massive kcp connections)
 		uint32_t Check(uint32_t current);
 
+		void ReplaceUserPtr(void *user);
+
 		// when you received a low level packet (eg. UDP packet), call it
 		int Input(const char *data, long size);
 
@@ -247,6 +256,9 @@ namespace KCP
 		// set maximum window size: sndwnd=32, rcvwnd=32 by default
 		void SetWindowSize(int sndwnd, int rcvwnd);
 		void GetWindowSize(int &sndwnd, int &rcvwnd);
+		std::pair<int, int> GetWindowSize();
+		int GetSendWindowSize();
+		int GetReceiveWindowSize();
 
 		// get how many packet is waiting to be sent
 		int WaitingForSend();
@@ -285,6 +297,7 @@ namespace KCP
 		void ParseFastAck(uint32_t sn, uint32_t ts);
 		void ParseData(internal_impl::Segment &newseg);
 		int WindowUnused();
+		int PeekSizeWithoutLock();
 	};
 }
 

@@ -177,7 +177,10 @@ namespace KCP
 		{
 			WriteLog(IKCP_LOG_OUTPUT, "[RO] %ld bytes", static_cast<long>(size));
 		}
-		if (size == 0) return 0;
+		if (size == 0)
+			return 0;
+		this->last_active.store(this->current.load());
+
 		return this->output((const char*)data, size, this->user);
 	}
 
@@ -200,19 +203,19 @@ namespace KCP
 	{
 		this->conv = conv;
 		this->user = user;
-		this->snd_una = 0;
-		this->snd_nxt = 0;
-		this->rcv_nxt = 0;
+		this->snd_una.store(0);
+		this->snd_nxt.store(0);
+		this->rcv_nxt.store(0);
 		this->ts_recent = 0;
 		this->ts_lastack = 0;
 		this->ts_probe = 0;
 		this->probe_wait = 0;
-		this->snd_wnd = IKCP_WND_SND;
-		this->rcv_wnd = IKCP_WND_RCV;
-		this->rmt_wnd = IKCP_WND_RCV;
-		this->cwnd = 0;
-		this->incr = 0;
-		this->probe = 0;
+		this->snd_wnd.store(IKCP_WND_SND);
+		this->rcv_wnd.store(IKCP_WND_RCV);
+		this->rmt_wnd.store(IKCP_WND_RCV);
+		this->cwnd.store(0);
+		this->incr.store(0);
+		this->probe.store(0);
 		this->mtu = IKCP_MTU_DEF;
 		this->mss = this->mtu - IKCP_OVERHEAD;
 		this->stream = false;
@@ -220,42 +223,42 @@ namespace KCP
 		this->buffer.resize(static_cast<size_t>(this->mtu) + IKCP_OVERHEAD);
 
 		this->state = 0;
-		this->ackblock = 0;
+		this->last_active.store(0);
 		this->rx_srtt = 0;
 		this->rx_rttval = 0;
 		this->rx_rto = IKCP_RTO_DEF;
 		this->rx_minrto = IKCP_RTO_MIN;
-		this->current = 0;
-		this->interval = IKCP_INTERVAL;
-		this->ts_flush = IKCP_INTERVAL;
+		this->current.store(0);
+		this->interval.store(IKCP_INTERVAL);
+		this->ts_flush.store(IKCP_INTERVAL);
 		this->nodelay = 0;
-		this->updated = 0;
+		this->updated.store(false);
 		this->logmask = 0;
 		this->ssthresh = IKCP_THRESH_INIT;
 		this->fastresend = 0;
 		this->fastlimit = IKCP_FASTACK_LIMIT;
-		this->nocwnd = false;
-		this->xmit = 0;
+		this->nocwnd.store(false);
+		this->xmit.store(0);
 		this->dead_link = IKCP_DEADLINK;
 	}
 
 	void KCP::MoveKCP(KCP &other) noexcept
 	{
 		this->conv = other.conv;
-		this->user = other.user;
-		this->snd_una = other.snd_una;
-		this->snd_nxt = other.snd_nxt;
-		this->rcv_nxt = other.rcv_nxt;
+		this->user.store(other.user.load());
+		this->snd_una.store(other.snd_una.load());
+		this->snd_nxt.store(other.snd_nxt.load());
+		this->rcv_nxt.store(other.rcv_nxt.load());
 		this->ts_recent = other.ts_recent;
 		this->ts_lastack = other.ts_lastack;
 		this->ts_probe = other.ts_probe;
 		this->probe_wait = other.probe_wait;
-		this->snd_wnd = other.snd_wnd;
-		this->rcv_wnd = other.rcv_wnd;
-		this->rmt_wnd = other.rmt_wnd;
-		this->cwnd = other.cwnd;
-		this->incr = other.incr;
-		this->probe = other.probe;
+		this->snd_wnd.store(other.snd_wnd.load());
+		this->rcv_wnd.store(other.rcv_wnd.load());
+		this->rmt_wnd.store(other.rmt_wnd.load());
+		this->cwnd.store(other.cwnd.load());
+		this->incr.store(other.incr.load());
+		this->probe.store(other.probe.load());
 		this->mtu = other.mtu;
 		this->mss = this->mss;
 		this->stream = other.stream;
@@ -263,42 +266,42 @@ namespace KCP
 		this->buffer = std::move(other.buffer);
 
 		this->state = other.state;
-		this->ackblock = other.ackblock;
+		this->last_active.store(other.last_active);
 		this->rx_srtt = other.rx_srtt;
 		this->rx_rttval = other.rx_rttval;
 		this->rx_rto = other.rx_rto;
 		this->rx_minrto = other.rx_minrto;
-		this->current = other.current;
-		this->interval = other.interval;
-		this->ts_flush = other.ts_flush;
+		this->current.store(other.current.load());
+		this->interval.store(other.interval.load());
+		this->ts_flush.store(other.ts_flush.load());
 		this->nodelay = other.nodelay;
-		this->updated = other.updated;
+		this->updated.store(other.updated.load());
 		this->logmask = other.logmask;
 		this->ssthresh = other.ssthresh;
 		this->fastresend = other.fastresend;
 		this->fastlimit = other.fastlimit;
-		this->nocwnd = other.nocwnd;
-		this->xmit = other.xmit;
+		this->nocwnd.store(other.nocwnd.load());
+		this->xmit.store(other.xmit.load());
 		this->dead_link = other.dead_link;
 	}
 
 	KCP::KCP(const KCP &other) noexcept
 	{
 		this->conv = other.conv;
-		this->user = other.user;
-		this->snd_una = other.snd_una;
-		this->snd_nxt = other.snd_nxt;
-		this->rcv_nxt = other.rcv_nxt;
+		this->user.store(other.user.load());
+		this->snd_una.store(other.snd_una.load());
+		this->snd_nxt.store(other.snd_nxt.load());
+		this->rcv_nxt.store(other.rcv_nxt.load());
 		this->ts_recent = other.ts_recent;
 		this->ts_lastack = other.ts_lastack;
 		this->ts_probe = other.ts_probe;
 		this->probe_wait = other.probe_wait;
-		this->snd_wnd = other.snd_wnd;
-		this->rcv_wnd = other.rcv_wnd;
-		this->rmt_wnd = other.rmt_wnd;
-		this->cwnd = other.cwnd;
-		this->incr = other.incr;
-		this->probe = other.probe;
+		this->snd_wnd.store(other.snd_wnd.load());
+		this->rcv_wnd.store(other.rcv_wnd.load());
+		this->rmt_wnd.store(other.rmt_wnd.load());
+		this->cwnd.store(other.cwnd.load());
+		this->incr.store(other.incr.load());
+		this->probe.store(other.probe.load());
 		this->mtu = other.mtu;
 		this->mss = this->mss;
 		this->stream = other.stream;
@@ -306,22 +309,22 @@ namespace KCP
 		this->buffer = other.buffer;
 
 		this->state = other.state;
-		this->ackblock = other.ackblock;
+		this->last_active.store(other.last_active);
 		this->rx_srtt = other.rx_srtt;
 		this->rx_rttval = other.rx_rttval;
 		this->rx_rto = other.rx_rto;
 		this->rx_minrto = other.rx_minrto;
-		this->current = other.current;
-		this->interval = other.interval;
-		this->ts_flush = other.ts_flush;
+		this->current.store(other.current.load());
+		this->interval.store(other.interval.load());
+		this->ts_flush.store(other.ts_flush.load());
 		this->nodelay = other.nodelay;
-		this->updated = other.updated;
+		this->updated.store(other.updated.load());
 		this->logmask = other.logmask;
 		this->ssthresh = other.ssthresh;
 		this->fastresend = other.fastresend;
 		this->fastlimit = other.fastlimit;
-		this->nocwnd = other.nocwnd;
-		this->xmit = other.xmit;
+		this->nocwnd.store(other.nocwnd.load());
+		this->xmit.store(other.xmit.load());
 		this->dead_link = other.dead_link;
 	}
 
@@ -343,12 +346,13 @@ namespace KCP
 		bool ispeek = len < 0;
 		bool recover = false;
 
+		std::unique_lock<std::shared_mutex> lock_rcv{ this->mtx_rcv };
 		if (this->rcv_queue.empty())
 			return -1;
 
 		if (len < 0) len = -len;
 
-		int peeksize = PeekSize();
+		int peeksize = PeekSizeWithoutLock();
 
 		if (peeksize < 0)
 			return -2;
@@ -356,7 +360,7 @@ namespace KCP
 		if (peeksize > len)
 			return -3;
 
-		if (this->rcv_queue.size() >= this->rcv_wnd)
+		if (this->rcv_queue.size() >= this->rcv_wnd.load())
 			recover = true;
 
 		// merge fragment
@@ -395,7 +399,7 @@ namespace KCP
 		while (!this->rcv_buf.empty())
 		{
 			auto seg = this->rcv_buf.begin();
-			if (seg->sn == this->rcv_nxt && this->rcv_queue.size() < this->rcv_wnd)
+			if (seg->sn == this->rcv_nxt.load() && this->rcv_queue.size() < this->rcv_wnd.load())
 			{
 				this->rcv_queue.splice(this->rcv_queue.end(), this->rcv_buf, seg);
 				this->rcv_nxt++;
@@ -407,7 +411,7 @@ namespace KCP
 		}
 
 		// fast recover
-		if (this->rcv_queue.size() < this->rcv_wnd && recover)
+		if (this->rcv_queue.size() < this->rcv_wnd.load() && recover)
 		{
 			// ready to send back IKCP_CMD_WINS in Flush
 			// tell remote my window size
@@ -435,6 +439,12 @@ namespace KCP
 	//---------------------------------------------------------------------
 	int KCP::PeekSize()
 	{
+		std::shared_lock<std::shared_mutex> lock_rcv{ mtx_rcv };
+		return PeekSizeWithoutLock();
+	}
+
+	int KCP::KCP::PeekSizeWithoutLock()
+	{
 		int length = 0;
 
 		if (this->rcv_queue.empty()) return -1;
@@ -453,12 +463,12 @@ namespace KCP
 		return length;
 	}
 
-
 	//---------------------------------------------------------------------
 	// user/upper level send, returns below zero for error
 	//---------------------------------------------------------------------
 	int KCP::Send(const char *buffer, size_t len)
 	{
+		std::unique_lock<std::shared_mutex> lock_snd{ this->mtx_snd };
 		assert(this->mss > 0);
 		//if (len < 0) return -1;
 
@@ -494,7 +504,7 @@ namespace KCP
 		uint32_t count;
 
 		if (len <= this->mss) count = 1;
-		else count = (len + this->mss - 1) / this->mss;
+		else count = uint32_t(len + this->mss - 1) / this->mss;
 
 		if (count >= IKCP_WND_RCV) return -2;
 
@@ -542,7 +552,7 @@ namespace KCP
 			this->rx_srtt = (7 * this->rx_srtt + rtt) / 8;
 			if (this->rx_srtt < 1) this->rx_srtt = 1;
 		}
-		rto = this->rx_srtt + std::max<uint32_t>(this->interval, 4 * this->rx_rttval);
+		rto = this->rx_srtt + std::max<uint32_t>(this->interval.load(), 4 * this->rx_rttval);
 		this->rx_rto = _ibound_(this->rx_minrto, rto, IKCP_RTO_MAX);
 	}
 
@@ -550,17 +560,17 @@ namespace KCP
 	{
 		if (!this->snd_buf.empty())
 		{
-			this->snd_una = this->snd_buf.front().sn;
+			this->snd_una.store(this->snd_buf.front().sn);
 		}
 		else
 		{
-			this->snd_una = this->snd_nxt;
+			this->snd_una.store(this->snd_nxt.load());
 		}
 	}
 
 	void KCP::ParseAck(uint32_t sn)
 	{
-		if (_itimediff(sn, this->snd_una) < 0 || _itimediff(sn, this->snd_nxt) >= 0)
+		if (_itimediff(sn, this->snd_una.load()) < 0 || _itimediff(sn, this->snd_nxt.load()) >= 0)
 			return;
 
 		for (auto seg = this->snd_buf.begin(); seg != this->snd_buf.end(); ++seg)
@@ -594,7 +604,7 @@ namespace KCP
 
 	void KCP::ParseFastAck(uint32_t sn, uint32_t ts)
 	{
-		if (_itimediff(sn, this->snd_una) < 0 || _itimediff(sn, this->snd_nxt) >= 0)
+		if (_itimediff(sn, this->snd_una.load()) < 0 || _itimediff(sn, this->snd_nxt.load()) >= 0)
 			return;
 
 		for (auto seg = this->snd_buf.begin(); seg != this->snd_buf.end(); ++seg)
@@ -639,8 +649,8 @@ namespace KCP
 		uint32_t sn = newseg.sn;
 		bool repeat = false;
 
-		if (_itimediff(sn, this->rcv_nxt + this->rcv_wnd) >= 0 ||
-			_itimediff(sn, this->rcv_nxt) < 0)
+		if (_itimediff(sn, this->rcv_nxt.load() + this->rcv_wnd.load()) >= 0 ||
+			_itimediff(sn, this->rcv_nxt.load()) < 0)
 		{
 			return;
 		}
@@ -673,7 +683,7 @@ namespace KCP
 		while (!this->rcv_buf.empty())
 		{
 			auto seg = this->rcv_buf.begin();
-			if (seg->sn == this->rcv_nxt && this->rcv_queue.size() < this->rcv_wnd)
+			if (seg->sn == this->rcv_nxt.load() && this->rcv_queue.size() < this->rcv_wnd.load())
 			{
 				this->rcv_queue.splice(this->rcv_queue.end(), this->rcv_buf, seg);
 				this->rcv_nxt++;
@@ -701,7 +711,9 @@ namespace KCP
 	//---------------------------------------------------------------------
 	int KCP::Input(const char *data, long size)
 	{
-		uint32_t prev_una = this->snd_una;
+		std::scoped_lock lock_recv_snd{ this->mtx_rcv, this->mtx_snd };
+
+		uint32_t prev_una = this->snd_una.load();
 		uint32_t maxack = 0, latest_ts = 0;
 		int flag = 0;
 
@@ -711,6 +723,7 @@ namespace KCP
 		}
 
 		if (data == NULL || (int)size < (int)IKCP_OVERHEAD) return -1;
+		this->last_active.store(this->current.load());
 
 		while (1)
 		{
@@ -739,15 +752,15 @@ namespace KCP
 				cmd != IKCP_CMD_WASK && cmd != IKCP_CMD_WINS)
 				return -3;
 
-			this->rmt_wnd = wnd;
+			this->rmt_wnd.store(wnd);
 			ParseUna(una);
 			ShrinkBuffer();
 
 			if (cmd == IKCP_CMD_ACK)
 			{
-				if (_itimediff(this->current, ts) >= 0)
+				if (_itimediff(this->current.load(), ts) >= 0)
 				{
-					UpdateAck(_itimediff(this->current, ts));
+					UpdateAck(_itimediff(this->current.load(), ts));
 				}
 				ParseAck(sn);
 				ShrinkBuffer();
@@ -777,7 +790,7 @@ namespace KCP
 				{
 					WriteLog(IKCP_LOG_IN_ACK,
 						"input ack: sn=%lu rtt=%ld rto=%ld", (unsigned long)sn,
-						(long)_itimediff(this->current, ts),
+						(long)_itimediff(this->current.load(), ts),
 						(long)this->rx_rto);
 				}
 			}
@@ -788,11 +801,13 @@ namespace KCP
 					WriteLog(IKCP_LOG_IN_DATA,
 						"input psh: sn=%lu ts=%lu", (unsigned long)sn, (unsigned long)ts);
 				}
-				if (_itimediff(sn, this->rcv_nxt + this->rcv_wnd) < 0)
+				if (_itimediff(sn, this->rcv_nxt.load() + this->rcv_wnd.load()) < 0)
 				{
+					std::unique_lock<std::shared_mutex> lock_ack{ this->mtx_ack };
 					// ack append
 					this->acklist.push_back({ sn , ts });
-					if (_itimediff(sn, this->rcv_nxt) >= 0)
+					lock_ack.unlock();
+					if (_itimediff(sn, this->rcv_nxt.load()) >= 0)
 					{
 						Segment seg(len);
 						seg.conv = conv;
@@ -846,33 +861,33 @@ namespace KCP
 			ParseFastAck(maxack, latest_ts);
 		}
 
-		if (_itimediff(this->snd_una, prev_una) > 0)
+		if (_itimediff(this->snd_una.load(), prev_una) > 0)
 		{
-			if (this->cwnd < this->rmt_wnd)
+			if (this->cwnd.load() < this->rmt_wnd.load())
 			{
 				uint32_t mss = this->mss;
-				if (this->cwnd < this->ssthresh)
+				if (this->cwnd.load() < this->ssthresh)
 				{
 					this->cwnd++;
 					this->incr += mss;
 				}
 				else
 				{
-					if (this->incr < mss) this->incr = mss;
-					this->incr += (mss * mss) / this->incr + (mss / 16);
-					if ((this->cwnd + 1) * mss <= this->incr)
+					if (this->incr.load() < mss) this->incr.store(mss);
+					this->incr += (mss * mss) / this->incr.load() + (mss / 16);
+					if ((this->cwnd.load() + 1) * mss <= this->incr.load())
 					{
 #if 1
-						this->cwnd = (this->incr + mss - 1) / ((mss > 0) ? mss : 1);
+						this->cwnd.store((this->incr.load() + mss - 1) / ((mss > 0) ? mss : 1));
 #else
 						this->cwnd++;
 #endif
 					}
 				}
-				if (this->cwnd > this->rmt_wnd)
+				if (this->cwnd.load() > this->rmt_wnd.load())
 				{
-					this->cwnd = this->rmt_wnd;
-					this->incr = this->rmt_wnd * mss;
+					this->cwnd.store(this->rmt_wnd.load());
+					this->incr = this->rmt_wnd.load() * mss;
 				}
 			}
 		}
@@ -882,9 +897,9 @@ namespace KCP
 
 	int KCP::WindowUnused()
 	{
-		if (this->rcv_queue.size() < this->rcv_wnd)
+		if (this->rcv_queue.size() < this->rcv_wnd.load())
 		{
-			return this->rcv_wnd - static_cast<int>(this->rcv_queue.size());
+			return this->rcv_wnd.load() - static_cast<int>(this->rcv_queue.size());
 		}
 		return 0;
 	}
@@ -895,7 +910,7 @@ namespace KCP
 	//---------------------------------------------------------------------
 	void KCP::Flush()
 	{
-		uint32_t current = this->current;
+		uint32_t current = this->current.load();
 		char *buffer = this->buffer.data();
 		char *ptr = buffer;
 		int size, i;
@@ -905,17 +920,18 @@ namespace KCP
 		int lost = 0;
 
 		// 'Update' haven't been called. 
-		if (this->updated == 0) return;
+		if (!this->updated.load()) return;
 
 		Segment seg;
 		seg.conv = this->conv;
 		seg.cmd = IKCP_CMD_ACK;
 		seg.frg = 0;
 		seg.wnd = WindowUnused();
-		seg.una = this->rcv_nxt;
+		seg.una = this->rcv_nxt.load();
 		seg.sn = 0;
 		seg.ts = 0;
 
+		std::unique_lock<std::shared_mutex> lock_ack{ this->mtx_ack };
 		// flush acknowledges
 		for (i = 0; i < this->acklist.size(); i++)
 		{
@@ -931,6 +947,7 @@ namespace KCP
 		}
 
 		this->acklist.clear();
+		lock_ack.unlock();
 
 		// probe window size (if remote window size equals zero)
 		if (this->rmt_wnd == 0)
@@ -938,18 +955,18 @@ namespace KCP
 			if (this->probe_wait == 0)
 			{
 				this->probe_wait = IKCP_PROBE_INIT;
-				this->ts_probe = this->current + this->probe_wait;
+				this->ts_probe = this->current.load() + this->probe_wait;
 			}
 			else
 			{
-				if (_itimediff(this->current, this->ts_probe) >= 0)
+				if (_itimediff(this->current.load(), this->ts_probe) >= 0)
 				{
 					if (this->probe_wait < IKCP_PROBE_INIT)
 						this->probe_wait = IKCP_PROBE_INIT;
 					this->probe_wait += this->probe_wait / 2;
 					if (this->probe_wait > IKCP_PROBE_LIMIT)
 						this->probe_wait = IKCP_PROBE_LIMIT;
-					this->ts_probe = this->current + this->probe_wait;
+					this->ts_probe = this->current.load() + this->probe_wait;
 					this->probe |= IKCP_ASK_SEND;
 				}
 			}
@@ -961,7 +978,7 @@ namespace KCP
 		}
 
 		// flush window probing commands
-		if (this->probe & IKCP_ASK_SEND)
+		if (this->probe.load() & IKCP_ASK_SEND)
 		{
 			seg.cmd = IKCP_CMD_WASK;
 			size = (int)(ptr - buffer);
@@ -974,7 +991,7 @@ namespace KCP
 		}
 
 		// flush window probing commands
-		if (this->probe & IKCP_ASK_TELL)
+		if (this->probe.load() & IKCP_ASK_TELL)
 		{
 			seg.cmd = IKCP_CMD_WINS;
 			size = (int)(ptr - buffer);
@@ -986,14 +1003,15 @@ namespace KCP
 			ptr = EncodeSegment(ptr, seg);
 		}
 
-		this->probe = 0;
+		this->probe.store(0);
 
 		// calculate window size
-		cwnd = std::min<uint32_t>(this->snd_wnd, this->rmt_wnd);
-		if (this->nocwnd == false) cwnd = std::min<uint32_t>(this->cwnd, cwnd);
+		cwnd = std::min<uint32_t>(this->snd_wnd.load(), this->rmt_wnd.load());
+		if (this->nocwnd == false) cwnd = std::min<uint32_t>(this->cwnd.load(), cwnd);
 
+		std::unique_lock<std::shared_mutex> lock_snd{ this->mtx_snd };
 		// move data from snd_queue to snd_buf
-		while (_itimediff(this->snd_nxt, this->snd_una + cwnd) < 0)
+		while (_itimediff(this->snd_nxt.load(), this->snd_una.load() + cwnd) < 0)
 		{
 			if (this->snd_queue.empty()) break;
 
@@ -1006,7 +1024,7 @@ namespace KCP
 			newseg->wnd = seg.wnd;
 			newseg->ts = current;
 			newseg->sn = this->snd_nxt++;
-			newseg->una = this->rcv_nxt;
+			newseg->una = this->rcv_nxt.load();
 			newseg->resendts = current;
 			newseg->rto = this->rx_rto;
 			newseg->fastack = 0;
@@ -1063,7 +1081,7 @@ namespace KCP
 				int need;
 				segment->ts = current;
 				segment->wnd = seg.wnd;
-				segment->una = this->rcv_nxt;
+				segment->una = this->rcv_nxt.load();
 
 				size = (int)(ptr - buffer);
 				need = IKCP_OVERHEAD + static_cast<int>(segment->data.size());
@@ -1100,12 +1118,12 @@ namespace KCP
 		// update ssthresh
 		if (change)
 		{
-			uint32_t inflight = this->snd_nxt - this->snd_una;
+			uint32_t inflight = this->snd_nxt.load() - this->snd_una.load();
 			this->ssthresh = inflight / 2;
 			if (this->ssthresh < IKCP_THRESH_MIN)
 				this->ssthresh = IKCP_THRESH_MIN;
-			this->cwnd = this->ssthresh + resent;
-			this->incr = this->cwnd * this->mss;
+			this->cwnd.store(this->ssthresh + resent);
+			this->incr.store(this->cwnd.load() * this->mss);
 		}
 
 		if (lost)
@@ -1113,14 +1131,14 @@ namespace KCP
 			this->ssthresh = cwnd / 2;
 			if (this->ssthresh < IKCP_THRESH_MIN)
 				this->ssthresh = IKCP_THRESH_MIN;
-			this->cwnd = 1;
-			this->incr = this->mss;
+			this->cwnd.store(1);
+			this->incr.store(this->mss);
 		}
 
-		if (this->cwnd < 1)
+		if (this->cwnd.load() < 1)
 		{
-			this->cwnd = 1;
-			this->incr = this->mss;
+			this->cwnd.store(1);
+			this->incr.store(this->mss);
 		}
 	}
 
@@ -1132,28 +1150,28 @@ namespace KCP
 	//---------------------------------------------------------------------
 	void KCP::Update(uint32_t current)
 	{
-		this->current = current;
+		this->current.store(current);
 
-		if (this->updated == 0)
+		if (!this->updated.load())
 		{
-			this->updated = 1;
-			this->ts_flush = this->current;
+			this->updated.store(true);
+			this->ts_flush.store(this->current.load());
 		}
 
-		int32_t slap = _itimediff(this->current, this->ts_flush);
+		int32_t slap = _itimediff(this->current.load(), this->ts_flush.load());
 
 		if (slap >= 10000 || slap < -10000)
 		{
-			this->ts_flush = this->current;
+			this->ts_flush.store(this->current.load());
 			slap = 0;
 		}
 
 		if (slap >= 0)
 		{
-			this->ts_flush += this->interval;
-			if (_itimediff(this->current, this->ts_flush) >= 0)
+			this->ts_flush += this->interval.load();
+			if (_itimediff(this->current.load(), this->ts_flush.load()) >= 0)
 			{
-				this->ts_flush = this->current + this->interval;
+				this->ts_flush.store(this->current.load() + this->interval.load());
 			}
 			Flush();
 		}
@@ -1171,11 +1189,11 @@ namespace KCP
 	//---------------------------------------------------------------------
 	uint32_t KCP::Check(uint32_t current)
 	{
-		uint32_t ts_flush = this->ts_flush;
+		uint32_t ts_flush = this->ts_flush.load();
 		int32_t tm_flush = 0x7fffffff;
 		int32_t tm_packet = 0x7fffffff;
 
-		if (this->updated == 0)
+		if (!this->updated.load())
 		{
 			return current;
 		}
@@ -1193,6 +1211,7 @@ namespace KCP
 
 		tm_flush = _itimediff(ts_flush, current);
 
+		std::unique_lock<std::shared_mutex> lock_snd{ this->mtx_snd };
 		for (auto seg = this->snd_buf.cbegin(); seg != this->snd_buf.cend(); ++seg)
 		{
 			int32_t diff = _itimediff(seg->resendts, current);
@@ -1202,11 +1221,17 @@ namespace KCP
 			}
 			if (diff < tm_packet) tm_packet = diff;
 		}
+		lock_snd.unlock();
 
 		uint32_t minimal = static_cast<uint32_t>(tm_packet < tm_flush ? tm_packet : tm_flush);
-		if (minimal >= this->interval) minimal = this->interval;
+		if (minimal >= this->interval.load()) minimal = this->interval.load();
 
 		return current + minimal;
+	}
+
+	void KCP::ReplaceUserPtr(void *user)
+	{
+		this->user.store(user);
 	}
 
 	int KCP::SetMTU(int mtu)
@@ -1230,7 +1255,7 @@ namespace KCP
 	{
 		if (interval > 5000) interval = 5000;
 		else if (interval < 10) interval = 10;
-		this->interval = interval;
+		this->interval.store(interval);
 		return 0;
 	}
 
@@ -1252,7 +1277,7 @@ namespace KCP
 		{
 			if (interval > 5000) interval = 5000;
 			else if (interval < 10) interval = 10;
-			this->interval = interval;
+			this->interval.store(interval);
 		}
 		if (resend >= 0)
 		{
@@ -1267,18 +1292,33 @@ namespace KCP
 	{
 		if (sndwnd > 0)
 		{
-			this->snd_wnd = sndwnd;
+			this->snd_wnd.store(sndwnd);
 		}
 		if (rcvwnd > 0)
 		{   // must >= max fragment size
-			this->rcv_wnd = std::max<uint32_t>(rcvwnd, IKCP_WND_RCV);
+			this->rcv_wnd.store(std::max<uint32_t>(rcvwnd, IKCP_WND_RCV));
 		}
 	}
 
 	void KCP::GetWindowSize(int &sndwnd, int &rcvwnd)
 	{
-		sndwnd = this->snd_wnd;
-		rcvwnd = this->rcv_wnd;
+		sndwnd = this->snd_wnd.load();
+		rcvwnd = this->rcv_wnd.load();
+	}
+
+	std::pair<int, int> KCP::KCP::GetWindowSize()
+	{
+		return { this->snd_wnd.load(), this->rcv_wnd.load() };
+	}
+
+	int KCP::GetSendWindowSize()
+	{
+		return this->snd_wnd.load();
+	}
+
+	int KCP::GetReceiveWindowSize()
+	{
+		return this->rcv_wnd.load();
 	}
 
 	int KCP::WaitingForSend()

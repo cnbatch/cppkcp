@@ -12,12 +12,8 @@
 //=====================================================================
 #include "kcp.hpp"
 
-#include <cstddef>
-#include <cstdlib>
-#include <cstdint>
 #include <cstdarg>
 #include <cstdio>
-#include <memory.h>
 
 
 namespace KCP

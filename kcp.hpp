@@ -14,8 +14,8 @@
 #define __KCP_HPP__
 
 #include <cstddef>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <cassert>
 #include <functional>
 #include <list>
@@ -211,7 +211,7 @@ namespace KCP
 		KCP(uint32_t conv, void *user) { Initialise(conv, user); }
 
 		// release kcp control object
-		~KCP() { printf("KCP %lu Released\n", this->conv); };
+		~KCP() = default;
 
 		// set output callback, which will be invoked by kcp
 		// int(*output)(const char *buf, int len, void *user)

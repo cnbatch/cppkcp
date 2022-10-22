@@ -941,7 +941,7 @@ namespace KCP
 		lock_ack.unlock();
 
 		// probe window size (if remote window size equals zero)
-		if (this->rmt_wnd == 0)
+		if (this->rmt_wnd.load() == 0)
 		{
 			if (this->probe_wait == 0)
 			{

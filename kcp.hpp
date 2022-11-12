@@ -19,6 +19,7 @@
 #include <cassert>
 #include <functional>
 #include <list>
+#include <mutex>
 #include <shared_mutex>
 #include <vector>
 

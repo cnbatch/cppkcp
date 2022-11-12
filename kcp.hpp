@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cassert>
+#include <atomic>
 #include <functional>
 #include <list>
 #include <mutex>

@@ -124,9 +124,10 @@ namespace KCP
 				MoveSegment(other);
 			}
 
-			Segment operator=(Segment &&other) noexcept
+			Segment& operator=(Segment &&other) noexcept
 			{
 				MoveSegment(other);
+				return *this;
 			}
 
 		private:
@@ -202,7 +203,7 @@ namespace KCP
 
 		KCP(KCP &&other) noexcept { MoveKCP(other); }
 
-		KCP operator=(KCP &&other) noexcept { MoveKCP(other); return *this; }
+		KCP& operator=(KCP &&other) noexcept { MoveKCP(other); return *this; }
 		//---------------------------------------------------------------------
 		// interface
 		//---------------------------------------------------------------------

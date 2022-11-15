@@ -145,7 +145,7 @@ namespace KCP
 
 	static inline long _itimediff(uint32_t later, uint32_t earlier)
 	{
-		return static_cast<long>(later - earlier);
+		return static_cast<long>((int64_t)later - (int64_t)earlier);
 	}
 
 	// write log

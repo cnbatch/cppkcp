@@ -255,7 +255,7 @@ namespace KCP
 		this->incr.store(other.incr.load());
 		this->probe.store(other.probe.load());
 		this->mtu = other.mtu;
-		this->mss = this->mss;
+		this->mss = other.mss;
 		this->stream = other.stream;
 
 		this->buffer = std::move(other.buffer);
@@ -297,7 +297,7 @@ namespace KCP
 		this->incr.store(other.incr.load());
 		this->probe.store(other.probe.load());
 		this->mtu = other.mtu;
-		this->mss = this->mss;
+		this->mss = other.mss;
 		this->stream = other.stream;
 
 		this->buffer = other.buffer;

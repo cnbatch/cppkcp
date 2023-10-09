@@ -5,16 +5,12 @@ Original Author of KCP: [skywind3000](https://github.com/skywind3000/kcp)
 
 # 简介
 
-以 C++ 的方式修改了 KCP 源码，用 STL 容器替代原作的手工链表。
+以 C++ 的方式修改了 KCP 源码，用 STL 容器替代原作的手工链表，用以改善性能。
 
-现在 `ikcp_recv` (新名字：`KCP::Receive`) 可以接受空 `std::vector` 并自动扩充 `vector` 的容量。
-
-**线程安全**，可以同时收发。
+外包装了一层，**线程安全**，可以同时收发。
 
 # Overview
 
-Modified KCP source code in C++ style. Original's manual Linked list is replaced with STL container.
+Modified KCP source code in C++ style. Original's manual Linked list is replaced with STL container, for performance improvement.
 
-`ikcp_recv` (New name: `KCP::Receive`) can now accept an empty `std::vector`. The size of this `vector` will be extended automatically.
-
-**Thread-safe**, KCP can now send and receive data simultaneously.
+Wrapped a layer, **Thread-safe**, KCP can now send and receive data simultaneously.

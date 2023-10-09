@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #include "test.h"
-#include "../kcp.hpp"
+#include "../ikcp.hpp"
 
 
 // 模拟网络
@@ -34,12 +34,16 @@ void test(int mode)
 
 	// 创建两个端点的 kcp对象，第一个参数 conv是会话编号，同一个会话需要相同
 	// 最后一个是 user参数，用来传递标识
-	kcp::kcp kcp1(0x11223344, (void*)0);
-	kcp::kcp kcp2(0x11223344, (void*)1);
+	KCP::kcp_core kcp1;
+	KCP::kcp_core kcp2;
+	kcp1.initialise(0x11223344, (void*)0);
+	kcp2.initialise(0x11223344, (void*)1);
 
 	// 设置kcp的下层输出，这里为 udp_output，模拟udp网络输出函数
 	kcp1.set_output(udp_output);
 	kcp2.set_output(udp_output);
+	//kcp1.SetStreamMode(true);
+	//kcp2.SetStreamMode(true);
 
 	uint32_t current = iclock();
 	uint32_t slap = current + 20;
@@ -51,21 +55,32 @@ void test(int mode)
 
 	// 配置窗口大小：平均延迟200ms，每20ms发送一个包，
 	// 而考虑到丢包重发，设置最大收发窗口为128
-	kcp1.set_window_size(128, 128);
-	kcp2.set_window_size(128, 128);
+	kcp1.set_wndsize(128, 128);
+	kcp2.set_wndsize(128, 128);
 
 	// 判断测试用例的模式
 	switch (mode)
 	{
 	case 0:
 		// 默认模式
-		kcp1.no_delay(0, 10, 0, 0);
-		kcp2.no_delay(0, 10, 0, 0);
+		kcp1.set_nodelay(0, 10, 0, 0);
+		kcp2.set_nodelay(0, 10, 0, 0);
 		break;
 	case 1:
 		// 普通模式，关闭流控等
-		kcp1.no_delay(0, 10, 0, 1);
-		kcp2.no_delay(0, 10, 0, 1);
+		kcp1.set_nodelay(0, 10, 0, 1);
+		kcp2.set_nodelay(0, 10, 0, 1);
+		break;
+	case 2:
+		// 启动快速模式
+		// 第1个参数 nodelay-启用以后若干常规加速将启动
+		// 第2个参数 interval为内部处理时钟，默认设置为 10ms
+		// 第3个参数 resend为快速重传指标，设置为2
+		// 第4个参数 为是否禁用常规流控，这里禁止
+		kcp1.set_nodelay(1, 10, 1, 1);
+		kcp2.set_nodelay(1, 10, 2, 1);
+		kcp1.rx_minrto = 10;
+		//kcp1.fastresend = 1;
 		break;
 	default:
 		// 启动快速模式
@@ -73,14 +88,13 @@ void test(int mode)
 		// 第2个参数 interval为内部处理时钟，默认设置为 10ms
 		// 第3个参数 resend为快速重传指标，设置为2
 		// 第4个参数 为是否禁用常规流控，这里禁止
-		kcp1.no_delay(1, 10, 1, 1);
-		kcp2.no_delay(1, 10, 2, 1);
-		kcp1.rx_min_rto() = 10;
+		kcp1.set_nodelay(2, 10, 1, 1);
+		kcp2.set_nodelay(2, 10, 2, 1);
+		kcp1.rx_minrto = 10;
 		//kcp1.fastresend = 1;
 	}
 
-
-	char buffer[2000];
+	char buffer[2000] = {};
 	int hr;
 
 	uint32_t ts1 = iclock();
@@ -89,8 +103,14 @@ void test(int mode)
 	{
 		isleep(1);
 		current = iclock();
-		kcp1.update(iclock());
-		kcp2.update(iclock());
+		if (kcp1.nocwnd == 0)
+			kcp1.update(iclock());
+		else
+			kcp1.update_quick(iclock());
+		if (kcp2.nocwnd == 0)
+			kcp2.update(iclock());
+		else
+			kcp2.update_quick(iclock());
 
 		// 每隔 20ms，kcp1发送数据
 		for (; current >= slap; slap += 20)
@@ -99,7 +119,8 @@ void test(int mode)
 			((uint32_t*)buffer)[1] = current;
 
 			// 发送上层协议包
-			kcp1.send(buffer, 1024);
+			int ret = kcp1.send(buffer, 1024);
+			assert(ret > 0);
 		}
 
 		// 处理虚拟网络：检测是否有udp包从p1->p2
@@ -124,8 +145,8 @@ void test(int mode)
 		// kcp2接收到任何包都返回回去
 		while (1)
 		{
-			std::vector<char> std_buffer;
-			hr = kcp2.receive(std_buffer);
+			std::vector<char> std_buffer(2000);
+			hr = kcp2.receive(std_buffer.data(), std_buffer.size());
 			// 没有收到包就退出
 			if (hr < 0) break;
 			// 如果收到包就回射
@@ -135,8 +156,8 @@ void test(int mode)
 		// kcp1收到kcp2的回射数据
 		while (1)
 		{
-			std::vector<char> std_buffer;
-			hr = kcp1.receive(std_buffer);
+			std::vector<char> std_buffer(2000);
+			hr = kcp1.receive(std_buffer.data(), std_buffer.size());
 			// 没有收到包就退出
 			if (hr < 0) break;
 			uint32_t sn = *(uint32_t*)(std_buffer.data() + 0);
@@ -162,7 +183,7 @@ void test(int mode)
 
 	ts1 = iclock() - ts1;
 
-	const char *names[3] = { "default", "normal", "fast" };
+	const char *names[4] = { "default", "normal", "fast", "fast2" };
 	printf("%s mode result (%dms):\n", names[mode], (int)ts1);
 	printf("avgrtt=%d maxrtt=%d tx=%d\n", (int)(sumrtt / count), (int)maxrtt, (int)vnet->tx1);
 	printf("press enter to next ...\n");
@@ -171,9 +192,10 @@ void test(int mode)
 
 int main()
 {
-	test(0);	// 默认模式，类似 TCP：正常模式，无快速重传，常规流控
-	test(1);	// 普通模式，关闭流控等
-	test(2);	// 快速模式，所有开关都打开，且关闭流控
+	test_k(0);	// 默认模式，类似 TCP：正常模式，无快速重传，常规流控
+	test_k(1);	// 普通模式，关闭流控等
+	test_k(2);	// 快速模式，所有开关都打开，且关闭流控
+	test_k(3);	// 快速模式，所有开关都打开，且关闭流控
 	return 0;
 }
 

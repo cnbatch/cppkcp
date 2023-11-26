@@ -12,7 +12,7 @@
 #include <vector>
 #include <deque>
 
-#include "../3rd_party/ikcp.hpp"
+#include "ikcp.hpp"
 
 namespace KCP
 {
@@ -144,6 +144,11 @@ namespace KCP
 
 		void* GetUserData();
 		void SetUserData(void *user_data);
+		bool WaitQueueIsFull();
+		bool WaitQueueIsEmpty();
+		bool WaitQueueAboveHalfCapacity();
+		bool WaitQueueBelowHalfCapacity();
+		int64_t GetWaitQueueAvailableCapacity();
 	};
 }
 
